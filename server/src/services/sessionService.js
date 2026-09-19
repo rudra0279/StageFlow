@@ -65,6 +65,13 @@ export const startLiveSession = async (eventId, sessionId) => {
     nextSession
   });
 
+  socketService.emitToEvent(eventId, SOCKET_EVENTS.SESSION_ACTIVATED, {
+    eventId,
+    session: activeSession,
+    activeSession,
+    nextSession
+  });
+
   socketService.emitToEvent(eventId, SOCKET_EVENTS.AGENDA_UPDATED, {
     eventId,
     sessions: allSessions

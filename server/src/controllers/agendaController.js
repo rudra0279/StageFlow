@@ -77,3 +77,25 @@ export const deleteAgendaItem = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAgendaByEventOrId = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const byEvent = await Session.find({ eventId: id })
+      .sort({ orderIndex: 1, scheduledStartTime: 1 })
+      .populate('speakerId');
+
+    if (byEvent && byEvent.length > 0) {
+      return res.status(200).json({ success: true, count: byEvent.length, data: byEvent });
+    }
+
+    const single = await Session.findById(id).populate('speakerId');
+    if (single) {
+      return res.status(200).json({ success: true, data: single });
+    }
+
+    return res.status(200).json({ success: true, count: 0, data: [] });
+  } catch (error) {
+    next(error);
+  }
+};

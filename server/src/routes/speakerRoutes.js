@@ -3,7 +3,8 @@ import {
   getSpeakers,
   createSpeaker,
   updateSpeaker,
-  deleteSpeaker
+  deleteSpeaker,
+  getSpeakerByIdOrEvent
 } from '../controllers/speakerController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/roleMiddleware.js';
@@ -16,6 +17,8 @@ router.route('/')
   .post(protect, authorize(ROLES.ORGANIZER), createSpeaker);
 
 router.route('/:id')
+  .get(protect, getSpeakerByIdOrEvent)
+  .put(protect, authorize(ROLES.ORGANIZER), updateSpeaker)
   .patch(protect, authorize(ROLES.ORGANIZER), updateSpeaker)
   .delete(protect, authorize(ROLES.ORGANIZER), deleteSpeaker);
 

@@ -29,14 +29,16 @@ export const createAnnouncement = async (req, res, next) => {
     });
 
     if (announcement.eventId) {
-      socketService.emitToEvent(announcement.eventId.toString(), SOCKET_EVENTS.STAGE_ALERT, {
+      const payload = {
         id: announcement._id,
         eventId: announcement.eventId,
         message: announcement.message,
         urgency: announcement.urgency,
         type: announcement.type,
         timestamp: announcement.createdAt
-      });
+      };
+      socketService.emitToEvent(announcement.eventId.toString(), SOCKET_EVENTS.STAGE_ALERT, payload);
+      socketService.emitToEvent(announcement.eventId.toString(), SOCKET_EVENTS.ANNOUNCEMENT_RECEIVED, payload);
     }
 
     res.status(201).json({

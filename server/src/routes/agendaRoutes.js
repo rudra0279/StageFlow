@@ -3,7 +3,8 @@ import {
   getAgenda,
   createAgendaItem,
   updateAgendaItem,
-  deleteAgendaItem
+  deleteAgendaItem,
+  getAgendaByEventOrId
 } from '../controllers/agendaController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/roleMiddleware.js';
@@ -16,6 +17,8 @@ router.route('/')
   .post(protect, authorize(ROLES.ORGANIZER), createAgendaItem);
 
 router.route('/:id')
+  .get(protect, getAgendaByEventOrId)
+  .put(protect, authorize(ROLES.ORGANIZER), updateAgendaItem)
   .patch(protect, authorize(ROLES.ORGANIZER), updateAgendaItem)
   .delete(protect, authorize(ROLES.ORGANIZER), deleteAgendaItem);
 

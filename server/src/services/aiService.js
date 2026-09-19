@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -39,22 +40,37 @@ export const generateAIScript = async ({
 
   // 1. Try Google Gemini API if key is present
   if (ENV.GEMINI_API_KEY) {
+    const candidateModels = [
+      'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-flash-latest'
+    ];
+
     try {
       const genAI = new GoogleGenerativeAI(ENV.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await Promise.race([
-        model.generateContent(prompt),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('AI Timeout')), 6000))
-      ]);
 
-      const response = await result.response;
-      const text = response.text();
-      if (text) {
-        generatedScript = text.trim();
-        provider = 'gemini';
+      for (const modelName of candidateModels) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await Promise.race([
+            model.generateContent(prompt),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('AI Timeout')), 10000))
+          ]);
+
+          const response = await result.response;
+          const text = response.text();
+          if (text) {
+            generatedScript = text.trim();
+            provider = 'gemini';
+            break;
+          }
+        } catch (mErr) {
+          logger.warn(`Gemini [${modelName}] failed: ${mErr.message}`);
+        }
       }
     } catch (err) {
-      logger.warn(`Gemini generation failed or timed out: ${err.message}. Using fallback.`);
+      logger.warn(`Gemini generation failed: ${err.message}. Using fallback.`);
     }
   }
 
@@ -103,17 +119,19 @@ export const generateAIScript = async ({
     provider = 'smart-fallback';
   }
 
-  // Save log in background
+  // Save log in background if DB is connected
   try {
-    await ScriptLog.create({
-      eventId,
-      sessionId,
-      scriptType,
-      prompt,
-      generatedScript,
-      tone,
-      provider
-    });
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      await ScriptLog.create({
+        eventId,
+        sessionId,
+        scriptType,
+        prompt,
+        generatedScript,
+        tone,
+        provider
+      });
+    }
   } catch (logErr) {
     // Non-blocking log
   }

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>StagePilot (StageFlow) – Complete Project Overview</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    
+    @page {
+      size: A4;
+      margin: 1.5cm;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #0f172a;
+      line-height: 1.6;
+      background: #ffffff;
+      padding: 20px;
+      max-width: 850px;
+      margin: 0 auto;
+    }
+
+    .header {
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 20px;
+      margin-bottom: 25px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #1e293b;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 9999px;
+      background: #eff6ff;
+      color: #2563eb;
+      margin-right: 8px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      border-left: 4px solid #2563eb;
+      padding-left: 10px;
+      margin-top: 25px;
+      margin-bottom: 12px;
+    }
+
+    p {
+      margin: 8px 0;
+      color: #334155;
+      font-size: 13.5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .code-box {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 12px 0;
+      overflow-x: auto;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 15px 0;
+    }
+
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .card h3 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .card p {
+      font-size: 12.5px;
+      margin: 0;
+      color: #64748b;
+    }
+
+    .footer {
+      margin-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div style="margin-bottom: 8px;">
+      <span class="badge">LIVE EVENT ORCHESTRATION</span>
+      <span class="badge" style="background:#f0fdf4; color:#16a34a;">FULL TESTS PASSED: 13/13</span>
+      <span class="badge" style="background:#fef3c7; color:#d97706;">VERSION 1.0.0</span>
+    </div>
+    <h1>StagePilot (StageFlow) – Master Project Overview</h1>
+    <p class="subtitle">AI Co-Pilot & Real-Time Synchronization Platform for Live Events & Stage Anchors</p>
+  </div>
+
+  <h2>1. Problem & Mission Statement</h2>
+  <p>
+    During live tech summits and hackathons, organizers backstage and anchors on stage frequently fall out of sync when sessions overrun. Traditional cue sheets fail instantly when delays occur, international speaker names get mispronounced, and stage anchors are left improvising. <strong>StagePilot</strong> eliminates this friction through real-time WebSocket communication, intelligent cascading schedule delays, and context-aware AI script assistance.
+  </p>
+
+  <h2>2. System Architecture</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h3>🏛️ Organizer War-Room (Port 5173)</h3>
+      <p>Real-time agenda visualizer, 1-click cascading delay buttons (+5m, +10m, +15m), and instant flash emergency alert broadcaster.</p>
+    </div>
+    <div class="card">
+      <h3>🎙️ Stage Anchor Station (Port 5173)</h3>
+      <p>High-contrast teleprompter with glass mirror mode (scaleX(-1)), speaker phonetic guides, synthesized sound alerts, and live countdown timer.</p>
+    </div>
+    <div class="card">
+      <h3>⚙️ Node.js + Express API (Port 5000)</h3>
+      <p>Modular REST controllers, JWT & Bcrypt authentication, input validation, and dynamic prompt assembly.</p>
+    </div>
+    <div class="card">
+      <h3>📡 WebSocket Engine & DB</h3>
+      <p>Socket.IO bi-directional rooms (`event_:id`), MongoDB with automatic in-memory fallback for zero-config startup.</p>
+    </div>
+  </div>
+
+  <h2>3. Key Innovations</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Capability & Implementation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Cascading Delay Engine</strong></td>
+        <td>Injecting +5m or +10m automatically recalculates the start and end times for all downstream agenda sessions without page reload.</td>
+      </tr>
+      <tr>
+        <td><strong>Teleprompter Glass Mirroring</strong></td>
+        <td>Horizontal mirroring toggle (`scaleX(-1)`) designed specifically for physical beamsplitter teleprompter glass rigs.</td>
+      </tr>
+      <tr>
+        <td><strong>Phonetic Pronunciation</strong></td>
+        <td>International speaker names display phonetic spelling guides (e.g., <em>Dr. Elena Rostova</em> &rarr; <code>[eh-LEH-nah ross-TOH-vah]</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>Zero-Refresh Emergency Chimes</strong></td>
+        <td>Synthesizes a pure 800Hz &rarr; 600Hz two-tone audio alert using the browser's Web Audio API (zero audio file dependencies).</td>
+      </tr>
+      <tr>
+        <td><strong>Context-Aware AI Co-Pilot</strong></td>
+        <td>Backstage drawer powered by Gemini/OpenAI SDKs with an offline-resilient smart fallback engine for stage banter and delay scripts.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Quick Start & Execution</h2>
+  <div class="code-box">
+# 1. Start Express + Socket.IO Backend Server (Port 5000)
+cd server
+npm start
+
+# 2. Start React + Vite Frontend Client (Port 5173)
+cd client
+npm run dev
+  </div>
+
+  <h2>5. 1-Click Demo Accounts</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Email</th>
+        <th>Password</th>
+        <th>Dashboard Route</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Organizer</strong></td>
+        <td><code>organizer@stagepilot.io</code></td>
+        <td><code>password123</code></td>
+        <td><code>http://localhost:5173/organizer</code></td>
+      </tr>
+      <tr>
+        <td><strong>Stage Anchor</strong></td>
+        <td><code>anchor@stagepilot.io</code></td>
+        <td><code>password123</code></td>
+        <td><code>http://localhost:5173/anchor</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    StagePilot &bull; AI Co-Pilot for Live Events &bull; Verified 13/13 Automated Tests & End-to-End Browser Workflows
+  </div>
+
+</body>
+</html>

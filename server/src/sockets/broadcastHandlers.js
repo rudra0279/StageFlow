@@ -17,14 +17,16 @@ export const registerBroadcastHandlers = (io, socket) => {
       });
 
       // Broadcast immediately to the room
-      io.to(`event_${eventId}`).emit(SOCKET_EVENTS.STAGE_ALERT, {
+      const alertPayload = {
         id: announcement._id,
         eventId,
         message,
         urgency: announcement.urgency,
         type: announcement.type,
         timestamp: announcement.createdAt
-      });
+      };
+      io.to(`event_${eventId}`).emit(SOCKET_EVENTS.STAGE_ALERT, alertPayload);
+      io.to(`event_${eventId}`).emit(SOCKET_EVENTS.ANNOUNCEMENT_RECEIVED, alertPayload);
     } catch (err) {
       logger.error(`Error broadcasting alert: ${err.message}`);
     }

@@ -1,6 +1,7 @@
 import { registerRoomHandlers } from './roomManager.js';
 import { registerAgendaHandlers } from './agendaHandlers.js';
 import { registerBroadcastHandlers } from './broadcastHandlers.js';
+import { registerTeleprompterHandlers } from './teleprompterHandlers.js';
 import { logger } from '../utils/logger.js';
 
 export const setupSockets = (io) => {
@@ -10,5 +11,6 @@ export const setupSockets = (io) => {
     registerRoomHandlers(io, socket);
     registerAgendaHandlers(io, socket);
     registerBroadcastHandlers(io, socket);
+    registerTeleprompterHandlers(io, socket);
   });
 };

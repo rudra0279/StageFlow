@@ -27,6 +27,7 @@ router.route('/')
 
 router.route('/:id')
   .get(protect, getEventById)
+  .put(protect, authorize(ROLES.ORGANIZER), updateEvent)
   .patch(protect, authorize(ROLES.ORGANIZER), updateEvent)
   .delete(protect, authorize(ROLES.ORGANIZER), deleteEvent);
 

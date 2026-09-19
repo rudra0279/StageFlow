@@ -29,12 +29,24 @@ const sessionSchema = new mongoose.Schema(
       default: 0
     },
     scheduledStartTime: {
-      type: Date,
-      required: true
+      type: Date
     },
     calculatedStartTime: {
-      type: Date,
-      required: true
+      type: Date
+    },
+    startTime: {
+      type: Date
+    },
+    endTime: {
+      type: Date
+    },
+    type: {
+      type: String,
+      default: 'presentation'
+    },
+    room: {
+      type: String,
+      default: 'Main Stage'
     },
     actualStartTime: {
       type: Date,
@@ -57,7 +69,8 @@ const sessionSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: Object.values(SESSION_STATUS),
-      default: SESSION_STATUS.UPCOMING
+      default: SESSION_STATUS.UPCOMING,
+      uppercase: true
     },
     aiScripts: {
       opening: { type: String, default: '' },
@@ -69,9 +82,45 @@ const sessionSchema = new mongoose.Schema(
     stageNotes: {
       type: String,
       default: ''
+    },
+    teleprompterState: {
+      currentScriptType: { type: String, default: 'introduction' },
+      scrollProgress: { type: Number, default: 0 },
+      lastWordIndex: { type: Number, default: 0 },
+      paceWpm: { type: Number, default: 0 },
+      lastSpokenSnippet: { type: String, default: '' },
+      updatedAt: { type: Date, default: null }
     }
   },
   { timestamps: true }
 );
 
+sessionSchema.pre('validate', function (next) {
+  if (this.status) {
+    this.status = this.status.toUpperCase();
+  }
+  if (!this.scheduledStartTime && this.startTime) {
+    this.scheduledStartTime = this.startTime;
+  }
+  if (!this.startTime && this.scheduledStartTime) {
+    this.startTime = this.scheduledStartTime;
+  }
+  if (!this.calculatedStartTime && this.scheduledStartTime) {
+    this.calculatedStartTime = this.scheduledStartTime;
+  }
+  if (this.startTime && this.endTime) {
+    const diffMins = Math.round((new Date(this.endTime) - new Date(this.startTime)) / 60000);
+    if (diffMins > 0) {
+      this.durationMinutes = diffMins;
+    }
+  } else if (this.scheduledStartTime && this.durationMinutes && !this.endTime) {
+    this.endTime = new Date(new Date(this.scheduledStartTime).getTime() + this.durationMinutes * 60000);
+  }
+  if (!this.scheduledStartTime) {
+    this.invalidate('scheduledStartTime', 'Session scheduledStartTime or startTime is required');
+  }
+  next();
+});
+
 export const Session = mongoose.model('Session', sessionSchema);
+export const Agenda = Session;

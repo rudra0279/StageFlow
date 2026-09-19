@@ -3,7 +3,8 @@ import {
   addSession,
   triggerDelay,
   activateSession,
-  updateScript
+  updateScript,
+  updateTeleprompterProgress
 } from '../controllers/sessionController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/roleMiddleware.js';
@@ -44,6 +45,13 @@ router.patch(
   '/:sessionId/script',
   protect,
   updateScript
+);
+
+// Optional speech progress / teleprompter analytics persistence
+router.patch(
+  '/:sessionId/teleprompter',
+  protect,
+  updateTeleprompterProgress
 );
 
 export default router;

@@ -100,9 +100,21 @@ async function generateScript(type, context) {
     if (env.AI_PROVIDER === 'gemini' && env.GEMINI_API_KEY) {
       try {
         const genAI = getGeminiClient();
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-1.5-flash'];
+        let text = null;
+        for (const mName of candidateModels) {
+          try {
+            const model = genAI.getGenerativeModel({ model: mName });
+            const result = await model.generateContent(prompt);
+            text = result.response.text().trim();
+            if (text) break;
+          } catch (mErr) {
+            logger.warn && logger.warn('[AI]', `Model ${mName} failed: ${mErr.message}`);
+          }
+        }
+        if (!text) {
+          throw new Error('All Gemini candidate models failed to generate content');
+        }
         logger.ai(`Gemini generated response for type="${type}"`);
         return {
           success: true,

@@ -74,3 +74,43 @@ export const updateScript = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateTeleprompterProgress = async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    const {
+      scrollProgress,
+      lastWordIndex,
+      paceWpm,
+      lastSpokenSnippet,
+      currentScriptType
+    } = req.body;
+
+    const session = await Session.findByIdAndUpdate(
+      sessionId,
+      {
+        $set: {
+          'teleprompterState.scrollProgress': Number(scrollProgress ?? 0),
+          'teleprompterState.lastWordIndex': Number(lastWordIndex ?? 0),
+          'teleprompterState.paceWpm': Number(paceWpm ?? 0),
+          'teleprompterState.lastSpokenSnippet': String(lastSpokenSnippet ?? '').slice(0, 500),
+          'teleprompterState.currentScriptType': currentScriptType ?? 'introduction',
+          'teleprompterState.updatedAt': new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Session not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Teleprompter progress updated',
+      data: session.teleprompterState
+    });
+  } catch (error) {
+    next(error);
+  }
+};

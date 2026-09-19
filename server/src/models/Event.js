@@ -3,9 +3,12 @@ import { EVENT_STATUS, HEALTH_STATUS } from '../constants/eventStatus.js';
 
 const eventSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      trim: true
+    },
     title: {
       type: String,
-      required: [true, 'Event title is required'],
       trim: true
     },
     description: {
@@ -15,6 +18,12 @@ const eventSchema = new mongoose.Schema(
     date: {
       type: Date,
       required: true
+    },
+    startTime: {
+      type: Date
+    },
+    endTime: {
+      type: Date
     },
     venue: {
       type: String,
@@ -56,5 +65,18 @@ const eventSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+eventSchema.pre('validate', function (next) {
+  if (!this.title && this.name) {
+    this.title = this.name;
+  }
+  if (!this.name && this.title) {
+    this.name = this.title;
+  }
+  if (!this.title) {
+    this.invalidate('title', 'Event title or name is required');
+  }
+  next();
+});
 
 export const Event = mongoose.model('Event', eventSchema);

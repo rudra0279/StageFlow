@@ -15,7 +15,10 @@ const speakerSchema = new mongoose.Schema(
     },
     title: {
       type: String,
-      required: [true, 'Speaker title / designation is required'],
+      trim: true
+    },
+    designation: {
+      type: String,
       trim: true
     },
     company: {
@@ -26,7 +29,15 @@ const speakerSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    topic: {
+      type: String,
+      default: ''
+    },
     bio: {
+      type: String,
+      default: ''
+    },
+    biography: {
       type: String,
       default: ''
     },
@@ -47,6 +58,10 @@ const speakerSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    profilePhoto: {
+      type: String,
+      default: ''
+    },
     socialLinks: {
       twitter: String,
       linkedin: String,
@@ -55,6 +70,21 @@ const speakerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+speakerSchema.pre('validate', function(next) {
+  if (!this.title && this.designation) this.title = this.designation;
+  if (!this.designation && this.title) this.designation = this.title;
+  if (!this.company && this.organization) this.company = this.organization;
+  if (!this.organization && this.company) this.organization = this.company;
+  if (!this.bio && this.biography) this.bio = this.biography;
+  if (!this.biography && this.bio) this.biography = this.bio;
+  if (!this.avatarUrl && this.profilePhoto) this.avatarUrl = this.profilePhoto;
+  if (!this.profilePhoto && this.avatarUrl) this.profilePhoto = this.avatarUrl;
+  if (!this.title) {
+    this.title = 'Speaker';
+  }
+  next();
+});
 
 speakerSchema.pre('save', function(next) {
   if (!this.phoneticName && this.pronunciationGuide) {
