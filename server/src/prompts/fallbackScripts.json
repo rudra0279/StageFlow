@@ -1,0 +1,28 @@
+{
+  "opening": {
+    "professional": "Good morning and a magnificent welcome to {eventTitle} here at {venue}! Today, industry leaders, visionaries, and pioneers have gathered to explore the frontiers of {theme}. Over the coming hours, you will witness transformative keynotes, groundbreaking sessions, and insightful discussions. I am your host and anchor for today. Settle in, get inspired, and let's officially begin!",
+    "energetic": "What is up, everyone! Welcome to {eventTitle}! Look around this room at {venue}—the energy is electric! Today is all about {theme}, pushing boundaries and building the future together. We have an unbelievable lineup of world-class speakers today. Are you ready to dive in? Let's kick off our very first session right now!",
+    "humorous": "Welcome everyone to {eventTitle}! The Wi-Fi password is taped to the back of your badges, the coffee is flowing, and we promise zero awkward breakout icebreakers today! We're thrilled to have you here at {venue} as we unpack {theme}. Let's get this incredible day started!"
+  },
+  "introduction": {
+    "professional": "Ladies and gentlemen, it is now my distinct honor to welcome our next distinguished speaker, {speakerName}. Serving as {speakerTitle} at {speakerCompany}, {speakerName} has been a pioneer in this space. Today, they will share key insights on \"{sessionTitle}\". Please join me in giving a warm welcome to {speakerName}!",
+    "energetic": "Get ready to take some serious notes! Our next guest is nothing short of a powerhouse. Please welcome {speakerTitle} at {speakerCompany}—the one and only {speakerName}! Today, {speakerName} will unveil \"{sessionTitle}\". Let's hear it with thunderous applause for {speakerName}!",
+    "storyteller": "Every major innovation begins with a daring idea and someone relentless enough to pursue it. Our next speaker has lived that journey. From {speakerCompany}, serving as {speakerTitle}, please welcome {speakerName} to the stage as they present \"{sessionTitle}\"!"
+  },
+  "transition": {
+    "professional": "Thank you so much to our previous speaker for those thought-provoking perspectives. As we continue our journey today through {theme}, we pivot to another critical angle. Coming up next is \"{nextSessionTitle}\" with {nextSpeakerName} from {nextSpeakerCompany}. Let's welcome them to the stage!",
+    "energetic": "What an incredible session! Give it up one more time! The momentum just keeps building here at {eventTitle}. Next on stage, we have \"{nextSessionTitle}\". Let's keep this energy soaring as we welcome {nextSpeakerName}!"
+  },
+  "delay": {
+    "professional": "Ladies and gentlemen, a quick stage update: we are taking a brief {delayMinutes}-minute technical intermission to ensure our next presenter has their live demo fully calibrated. Please feel free to stretch your legs, refresh your water, and we will resume punctually at {newTime}.",
+    "humorous": "Attention everyone: live demos are the ultimate thrill in tech, and our next speaker's machine decided to run a surprise 2-minute update. We are holding for just {delayMinutes} minutes while our audio and visual crew work their magic. While you wait, turn to your neighbor and share your favorite hot take on {theme}!",
+    "energetic": "Hey everyone, quick backstage adjustment! We are giving our crew {delayMinutes} minutes to set up an exceptional live showcase for \"{nextSessionTitle}\". Keep your seats or grab a quick coffee—we will be right back with full throttle in {delayMinutes} minutes!"
+  },
+  "closing": {
+    "professional": "Ladies and gentlemen, as we bring {eventTitle} to a close, I want to extend our heartfelt gratitude to our extraordinary speakers, our organizers, and most importantly, all of you for your engagement and ideas. Thank you for spending your day with us, travel safely, and keep innovating!",
+    "energetic": "What a day! That is an official wrap on {eventTitle}! Give yourselves a huge round of applause! Take the ideas, take the connections, and let's go build the future. Thank you all and see you next year!"
+  },
+  "copilot": {
+    "default": "Here is a quick fact for the stage: {speakerName} is known for pioneering work at {speakerCompany}. Mention their recent work on {theme} or ask the audience a quick show-of-hands question to bridge any quiet moment."
+  }
+}

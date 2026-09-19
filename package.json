@@ -1,0 +1,27 @@
+{
+  "name": "stagepilot",
+  "version": "1.0.0",
+  "description": "StagePilot – AI Co-Pilot for Live Events",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"bgBlue.bold,bgGreen.bold\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "seed": "npm run seed --prefix server",
+    "build": "npm run build --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "stagepilot",
+    "event-management",
+    "ai-copilot",
+    "socket.io",
+    "react",
+    "teleprompter"
+  ],
+  "author": "StagePilot Team",
+  "license": "MIT"
+}
