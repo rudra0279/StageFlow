@@ -14,6 +14,8 @@ import { Loader } from '../../components/common/Loader';
 import { Button } from '../../components/common/Button';
 import { Bot, Maximize2, Radio, Sparkles } from 'lucide-react';
 
+import { AnchorQAFeed } from '../../components/anchor/AnchorQAFeed';
+
 export const LiveAnchorView = () => {
   const { id } = useParams();
   const {
@@ -33,6 +35,7 @@ export const LiveAnchorView = () => {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [selectedScriptType, setSelectedScriptType] = useState('introduction');
+  const [copilotExternalMsg, setCopilotExternalMsg] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -54,6 +57,11 @@ export const LiveAnchorView = () => {
   const handleOpenGenerateModal = (session, scriptType = 'introduction') => {
     setSelectedScriptType(scriptType);
     setIsAIModalOpen(true);
+  };
+
+  const handleAiAssistResult = (assistResult) => {
+    setCopilotExternalMsg(assistResult);
+    setIsCopilotOpen(true);
   };
 
   if (loading && !event) {
@@ -141,6 +149,13 @@ export const LiveAnchorView = () => {
             onOpenGenerateModal={handleOpenGenerateModal}
           />
         </div>
+
+        {/* Live Approved Q&A Feed for Anchor */}
+        <AnchorQAFeed
+          eventId={event?._id}
+          track={activeSession?.track || activeSession?.room || 'Track A'}
+          onAiAssistResult={handleAiAssistResult}
+        />
       </div>
 
       {/* Fullscreen Teleprompter Modal */}
@@ -158,6 +173,7 @@ export const LiveAnchorView = () => {
         onClose={() => setIsCopilotOpen(false)}
         eventId={event?._id}
         session={activeSession}
+        externalMessage={copilotExternalMsg}
       />
 
       {/* AI Script Generator Modal */}

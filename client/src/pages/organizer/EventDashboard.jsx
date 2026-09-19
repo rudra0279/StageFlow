@@ -6,6 +6,7 @@ import { EventHealthCard } from '../../components/organizer/EventHealthCard';
 import { AgendaManager } from '../../components/organizer/AgendaManager';
 import { BroadcastModal } from '../../components/organizer/BroadcastModal';
 import { ScriptGeneratorModal } from '../../components/ai/ScriptGeneratorModal';
+import { OrganizerQAModeration } from '../../components/organizer/OrganizerQAModeration';
 import { Button } from '../../components/common/Button';
 import { Loader } from '../../components/common/Loader';
 import { Radio, ExternalLink, Sparkles, MapPin, Calendar, Clock } from 'lucide-react';
@@ -123,13 +124,16 @@ export const EventDashboard = () => {
         </div>
 
         {/* Right column: Full Agenda Manager */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <AgendaManager
             eventId={event._id}
             sessions={sessions}
             onReload={() => loadEvent(event._id)}
             onOpenAIModal={(s) => setSelectedSessionForAI(s)}
           />
+
+          {/* Q&A Moderation Queue */}
+          <OrganizerQAModeration eventId={event._id} />
         </div>
       </div>
 

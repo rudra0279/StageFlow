@@ -61,6 +61,10 @@ const questionSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    answeredAt: {
+      type: Date,
+      default: null
+    },
     aiAnswerSuggestion: {
       type: String,
       default: null
@@ -76,6 +80,21 @@ const questionSchema = new mongoose.Schema(
 // Virtual alias 'text' -> 'question'
 questionSchema.virtual('text').get(function () {
   return this.question;
+});
+
+// Virtual alias 'track' -> 'trackId'
+questionSchema.virtual('track').get(function () {
+  return this.trackId;
+});
+
+// Virtual alias 'isAnswered' -> status === 'ANSWERED'
+questionSchema.virtual('isAnswered').get(function () {
+  return this.status === 'ANSWERED';
+});
+
+// Virtual alias 'upvoters' -> upvotedBy
+questionSchema.virtual('upvoters').get(function () {
+  return this.upvotedBy || [];
 });
 
 // Pre-validate hook for aliases and uppercase normalization

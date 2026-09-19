@@ -98,3 +98,78 @@ export const saveSessionScript = async (sessionId, scriptType, content) => {
 
   return session;
 };
+
+export const startSession = async (eventId, sessionId) => {
+  const session = await Session.findByIdAndUpdate(
+    sessionId,
+    { status: 'LIVE', actualStartTime: new Date() },
+    { new: true }
+  ).populate('speakerId');
+
+  const track = session?.track || session?.room || session?.trackId || 'Track A';
+  return { session, track };
+};
+
+export const delaySession = async (eventId, sessionId, delayMinutes) => {
+  const targetSession = await Session.findById(sessionId);
+  if (!targetSession) throw new Error('Session not found');
+
+  const track = targetSession.track || targetSession.room || targetSession.trackId || 'Track A';
+
+  // Find all sessions on this specific track
+  const trackSessions = await Session.find({
+    eventId,
+    $or: [{ track }, { room: track }, { trackId: track }]
+  }).sort({ orderIndex: 1, startTime: 1 });
+
+  const targetIndex = trackSessions.findIndex(s => s._id.toString() === sessionId.toString());
+
+  const shiftMs = delayMinutes * 60000;
+  const affectedSessions = [];
+
+  for (let i = 0; i < trackSessions.length; i++) {
+    const s = trackSessions[i];
+    if (i >= targetIndex) {
+      s.delayMinutes = (s.delayMinutes || 0) + delayMinutes;
+      s.delayOffsetMinutes = (s.delayOffsetMinutes || 0) + delayMinutes;
+      if (s.endTime) s.endTime = new Date(new Date(s.endTime).getTime() + shiftMs);
+      if (i > targetIndex && s.startTime) {
+        s.startTime = new Date(new Date(s.startTime).getTime() + shiftMs);
+      }
+      await s.save();
+      affectedSessions.push(s);
+    }
+  }
+
+  const payload = {
+    eventId,
+    sessionId,
+    track,
+    delayMinutes,
+    trackDelayMinutes: delayMinutes,
+    affectedSessions
+  };
+
+  socketService.emitToEvent(eventId, 'sessionDelayed', payload);
+  socketService.emitToEvent(eventId, SOCKET_EVENTS.DELAY_BROADCAST, payload);
+
+  return payload;
+};
+
+export const getEventState = async (eventId, track) => {
+  const query = { eventId };
+  if (track) {
+    query.$or = [{ track }, { room: track }, { trackId: track }];
+  }
+  const trackSessions = await Session.find(query).sort({ orderIndex: 1 }).populate('speakerId');
+  const liveSession = trackSessions.find(s => s.status === 'LIVE') || trackSessions[0] || null;
+  const nextSession = trackSessions.find(s => s.status === 'UPCOMING') || trackSessions[1] || null;
+
+  return {
+    eventId,
+    currentTrack: track || 'Track A',
+    currentSession: liveSession,
+    nextSession,
+    sessions: trackSessions
+  };
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bot, Send, Sparkles, X, MessageSquare, ChevronRight } from 'lucide-react';
 import { Button } from '../common/Button';
 import { aiApi } from '../../api/aiApi';
@@ -7,7 +7,8 @@ export const AnchorCopilotDrawer = ({
   isOpen,
   onClose,
   eventId,
-  session
+  session,
+  externalMessage
 }) => {
   const [messages, setMessages] = useState([
     {
@@ -15,6 +16,19 @@ export const AnchorCopilotDrawer = ({
       text: 'Hey! I am your AI Stage Co-Pilot. Ask me for quick speaker facts, audience icebreakers, or backup filler lines while live on stage.'
     }
   ]);
+
+  useEffect(() => {
+    if (externalMessage) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: 'bot',
+          text: `[Q&A AI Assistance - ${externalMessage.action?.toUpperCase()}]\nQuestion: "${externalMessage.questionText}"\n\n${externalMessage.result}`,
+          provider: 'StagePilot AI Question Assist'
+        }
+      ]);
+    }
+  }, [externalMessage]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
 

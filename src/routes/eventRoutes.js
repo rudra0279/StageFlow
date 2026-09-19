@@ -8,12 +8,14 @@ const speakerRoutes = require('./speakerRoutes');
 const agendaRoutes = require('./agendaRoutes');
 const sessionRoutes = require('./sessionRoutes');
 const announcementRoutes = require('./announcementRoutes');
+const questionRoutes = require('./questionRoutes');
 
 // Nested subroutes for an event
 router.use('/:eventId/speakers', speakerRoutes);
 router.use('/:eventId/agenda', agendaRoutes);
 router.use('/:eventId/sessions', sessionRoutes);
 router.use('/:eventId/announcements', announcementRoutes);
+router.use('/:eventId/questions', questionRoutes);
 
 // Event CRUD
 router.route('/')

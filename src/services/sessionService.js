@@ -10,11 +10,16 @@ function calculateHealth(delayTotalMinutes) {
   return 'RUNNING_LATE';
 }
 
-async function getEventState(eventId) {
+async function getEventState(eventId, track) {
   const event = await Event.findById(eventId);
   if (!event) throw new Error('Event not found');
 
-  const agendaList = await Agenda.find({ eventId })
+  let filter = { eventId };
+  if (track) {
+    filter.$or = [{ track }, { room: track }, { trackId: track }];
+  }
+
+  const agendaList = await Agenda.find(filter)
     .populate('speakerId')
     .sort({ orderIndex: 1, startTime: 1 });
 
@@ -44,6 +49,8 @@ async function getEventState(eventId) {
     nextSession,
     eventHealth,
     agendaList,
+    currentTrack: track || 'Track A',
+    trackDelayMinutes: currentSession ? (currentSession.delayMinutes || 0) : 0,
   };
 }
 
@@ -51,14 +58,20 @@ async function startSession(eventId, agendaId) {
   const event = await Event.findById(eventId);
   if (!event) throw new Error('Event not found');
 
-  // Complete any currently LIVE session
-  await Agenda.updateMany(
-    { eventId, status: 'LIVE', _id: { $ne: agendaId } },
-    { $set: { status: 'COMPLETED' } }
-  );
-
   const session = await Agenda.findById(agendaId).populate('speakerId');
   if (!session) throw new Error('Agenda session not found');
+
+  const track = session.track || session.trackId || 'Track A';
+
+  // Complete any currently LIVE session in this track
+  const otherSessions = await Agenda.find({ eventId });
+  for (const s of otherSessions) {
+    const sTrack = s.track || s.trackId || 'Track A';
+    if (sTrack === track && s.status === 'LIVE' && s._id.toString() !== agendaId.toString()) {
+      s.status = 'COMPLETED';
+      await s.save();
+    }
+  }
 
   session.status = 'LIVE';
   await session.save();
@@ -67,7 +80,7 @@ async function startSession(eventId, agendaId) {
   event.currentSessionId = session._id;
   await event.save();
 
-  const state = await getEventState(eventId);
+  const state = await getEventState(eventId, track);
   logger.session(`Session started: "${session.title}" in event: ${event.name}`);
 
   const eventStatePayload = {
@@ -76,12 +89,13 @@ async function startSession(eventId, agendaId) {
     currentSession: state.currentSession,
     nextSession: state.nextSession,
     delayTotalMinutes: event.delayTotalMinutes,
+    currentTrack: track,
   };
 
   socketEmitter.emitSessionStarted(eventId, session, eventStatePayload);
   socketEmitter.emitEventStateChanged(eventId, eventStatePayload);
 
-  return { session, eventState: eventStatePayload };
+  return { session, eventState: eventStatePayload, track, currentTrack: track };
 }
 
 async function completeSession(eventId, agendaId) {
@@ -94,13 +108,12 @@ async function completeSession(eventId, agendaId) {
   session.status = 'COMPLETED';
   await session.save();
 
-  // If this was current session, clear or advance
   if (event.currentSessionId && event.currentSessionId.toString() === agendaId.toString()) {
     event.currentSessionId = null;
     await event.save();
   }
 
-  const state = await getEventState(eventId);
+  const state = await getEventState(eventId, session.track || session.trackId);
   logger.session(`Session completed: "${session.title}" in event: ${event.name}`);
 
   const eventStatePayload = {
@@ -132,7 +145,7 @@ async function skipSession(eventId, agendaId) {
     await event.save();
   }
 
-  const state = await getEventState(eventId);
+  const state = await getEventState(eventId, session.track || session.trackId);
   logger.session(`Session skipped: "${session.title}" in event: ${event.name}`);
 
   const eventStatePayload = {
@@ -161,26 +174,19 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   const session = await Agenda.findById(agendaId).populate('speakerId');
   if (!session) throw new Error('Agenda session not found');
 
+  const targetTrack = session.track || session.trackId || 'Track A';
   const delayMs = delayMin * 60 * 1000;
 
-  // 1. Extend current session endTime and delayMinutes
   session.endTime = new Date(new Date(session.endTime).getTime() + delayMs);
   session.delayMinutes = (session.delayMinutes || 0) + delayMin;
   session.durationMinutes = (session.durationMinutes || 0) + delayMin;
   await session.save();
 
-  // 2. Adjust affected subsequent schedule items for this specific track
-  const subsequentQuery = {
-    eventId,
-    _id: { $ne: session._id },
-    orderIndex: { $gt: session.orderIndex },
-    status: { $in: ['UPCOMING', 'DELAYED'] },
-  };
-  if (session.trackId) {
-    subsequentQuery.trackId = session.trackId;
-  }
-
-  const subsequentSessions = await Agenda.find(subsequentQuery).sort({ orderIndex: 1 });
+  const allAgenda = await Agenda.find({ eventId }).sort({ orderIndex: 1 });
+  const subsequentSessions = allAgenda.filter(s => {
+    const sTrack = s.track || s.trackId || 'Track A';
+    return sTrack === targetTrack && s._id.toString() !== session._id.toString() && s.orderIndex > session.orderIndex;
+  });
 
   for (const item of subsequentSessions) {
     item.startTime = new Date(new Date(item.startTime).getTime() + delayMs);
@@ -189,7 +195,6 @@ async function delaySession(eventId, agendaId, delayMinutes) {
     await item.save();
   }
 
-  // 3. Update event cumulative delay & health
   event.delayTotalMinutes = (event.delayTotalMinutes || 0) + delayMin;
   event.eventHealth = calculateHealth(event.delayTotalMinutes);
   await event.save();
@@ -198,12 +203,13 @@ async function delaySession(eventId, agendaId, delayMinutes) {
     `Delayed session "${session.title}" by +${delayMin}m. Total delay: ${event.delayTotalMinutes}m. Health: ${event.eventHealth}`
   );
 
-  // 4. Recalculate event state
-  const state = await getEventState(eventId);
+  const state = await getEventState(eventId, targetTrack);
 
   const delayPayload = {
     agendaId: session._id,
     delayMinutes: delayMin,
+    track: targetTrack,
+    affectedSessions: [session, ...subsequentSessions],
     currentSession: state.currentSession,
     nextSession: state.nextSession,
     eventHealth: state.eventHealth,
@@ -219,7 +225,6 @@ async function delaySession(eventId, agendaId, delayMinutes) {
     delayTotalMinutes: event.delayTotalMinutes,
   };
 
-  // 5. Broadcast changes via Socket.IO
   socketEmitter.emitSessionDelayed(eventId, delayPayload);
   socketEmitter.emitEventStateChanged(eventId, eventStatePayload);
   socketEmitter.emitAgendaUpdated(eventId, state.agendaList);
@@ -227,6 +232,8 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   return {
     session,
     delayMinutes: delayMin,
+    track: targetTrack,
+    trackDelayMinutes: delayMin,
     eventHealth: state.eventHealth,
     currentSession: state.currentSession,
     nextSession: state.nextSession,

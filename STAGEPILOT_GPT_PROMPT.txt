@@ -1,0 +1,63 @@
+================================================================================
+          STAGEPILOT (STAGEFLOW) — GPT HANDOVER & PROJECT PROMPT FILE
+================================================================================
+
+[ABOUT THE PROJECT]
+StagePilot (StageFlow) is a real-time multi-track stage management system and live teleprompter application designed for conference organizers, anchors, and event producers.
+
+[GITHUB REPOSITORY]
+Remote URL: https://github.com/rudra0279/StageFlow.git
+Branch: main
+
+[TECH STACK SUMMARY]
+- Frontend: React (v18), Vite (Port 5173/5175), Web Speech API (Browser STT), Web Audio API, Socket.IO Client, Axios
+- Backend: Node.js, Express, Socket.IO Server (Port 5001 - resolved macOS port 5000 AirPlay conflict), MongoDB (In-memory fallback for local dev), JWT Auth
+- AI Integration: Google Gemini AI API (Script generation, Stage Co-Pilot, Announcement suggestions)
+
+[COMPLETED STAGES & FEATURE MATRIX]
+1. STAGE 1: Anchor Teleprompter & Live Speech Follower
+   - High-contrast, stage-ready Teleprompter UI.
+   - Horizontal mirror mode (for physical glass teleprompters).
+   - Auto-scroll with variable speed controls and dynamic font sizes.
+   - Pronunciation guide for speaker names & terms.
+   - Urgent Flash Banner & Web Audio chime alert system.
+   - Browser Web Speech API for real-time speech tracking & teleprompter auto-follow.
+
+2. STAGE 2: Organizer War Room & AI Co-Pilot
+   - Real-time Organizer War Room control dashboard.
+   - Cascading Delay Engine: automatically recalculates downstream session start times across tracks when delays occur.
+   - AI Stage Co-Pilot powered by Gemini API for live delay mitigation and announcements.
+   - Real-time multi-user WebSocket synchronization via Socket.IO.
+
+3. STAGE 3: Multi-Track Support & QA Integration
+   - Support for multiple concurrent tracks (Track A — Main Stage, Track B — Workshop Hall, Track C — Networking).
+   - Track-isolated delay management (adjust delays on a specific track without affecting unrelated stages).
+   - Anchor Station track selector.
+   - 13/13 automated integration tests passing cleanly.
+
+[CURRENT DEVELOPMENT ENVIRONMENT & CREDENTIALS]
+- Backend Server URL: http://localhost:5001
+- Health Check: http://localhost:5001/api/health
+- Frontend Vite App: http://localhost:5173 (or fallback http://localhost:5175)
+- Organizer Demo Account: organizer@stagepilot.io / password123
+- Anchor Demo Account:    anchor@stagepilot.io / password123
+
+================================================================================
+                    PASTE THE TEXT BELOW INTO CHATGPT
+================================================================================
+
+Hi GPT! I am working on StagePilot (StageFlow), a real-time multi-track stage management and live teleprompter application.
+
+Here is the current status of the project:
+1. GitHub Repository: https://github.com/rudra0279/StageFlow.git (main branch up to date).
+2. Stack: React + Vite, Node.js + Express, Socket.IO, MongoDB, Web Speech API, Gemini AI.
+3. Features Implemented:
+   - Teleprompter with mirror mode, speech tracking, auto-scroll, and pronunciation guide.
+   - Organizer War Room with Cascading Delay Engine and AI Stage Co-Pilot.
+   - Multi-Track Event handling (Track A, B, C) with track-isolated delay management.
+   - Server running on Port 5001 with Vite proxy fully configured.
+
+I need help with my next task:
+[TYPE YOUR NEXT FEATURE / TASK HERE, e.g., "Add PDF export for stage schedules", "Build presenter timer HUD", or "Implement speaker analytics dashboard"]
+
+Please review the architecture and provide a detailed technical implementation plan with code examples.

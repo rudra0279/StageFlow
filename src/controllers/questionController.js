@@ -11,10 +11,59 @@ const QUESTION_STATUS = {
   ANSWERED: 'ANSWERED'
 };
 
+function broadcastQuestionEvent(eventName, questionDoc) {
+  try {
+    const { getIO } = require('../socket/socketServer');
+    const io = getIO();
+    if (!io) return;
+    const qData = questionDoc.toJSON ? questionDoc.toJSON() : { ...questionDoc };
+    qData.isAnswered = qData.status === 'ANSWERED';
+    if (!qData.track && qData.trackId) qData.track = qData.trackId;
+    if (!qData.trackId && qData.track) qData.trackId = qData.track;
+
+    const eventId = qData.eventId ? qData.eventId.toString() : '';
+    const track = qData.track || qData.trackId || 'Track A';
+
+    const payload = {
+      question: qData,
+      questionId: qData._id,
+      status: qData.status,
+      isAnswered: qData.isAnswered,
+      upvotes: qData.upvotes,
+      track: track,
+      eventId: eventId
+    };
+
+    const mainRoom = `event:${eventId}`;
+    const legacyMain = `event_${eventId}`;
+    const orgRoom = `event_${eventId}_organizers`;
+    const orgRoom2 = `event:${eventId}:organizers`;
+    const anchorRoom = `event_${eventId}_anchors`;
+    const anchorRoom2 = `event:${eventId}:anchors`;
+    const trackRoom = `event_${eventId}_anchors_${track}`;
+    const trackRoom2 = `event:${eventId}:anchors:${track}`;
+
+    if (eventName === 'questionSubmitted') {
+      io.to(orgRoom).to(orgRoom2).emit('questionSubmitted', payload);
+    } else if (eventName === 'questionApproved') {
+      io.to(mainRoom).to(legacyMain).to(orgRoom).to(orgRoom2).to(anchorRoom).to(anchorRoom2).to(trackRoom).to(trackRoom2).emit('questionApproved', payload);
+    } else if (eventName === 'questionRejected') {
+      io.to(orgRoom).to(orgRoom2).emit('questionRejected', payload);
+    } else if (eventName === 'questionUpvoted') {
+      io.to(mainRoom).to(legacyMain).to(orgRoom).to(orgRoom2).to(anchorRoom).to(anchorRoom2).to(trackRoom).to(trackRoom2).emit('questionUpvoted', payload);
+    } else if (eventName === 'questionAnswered') {
+      io.to(mainRoom).to(legacyMain).to(orgRoom).to(orgRoom2).to(anchorRoom).to(anchorRoom2).to(trackRoom).to(trackRoom2).emit('questionAnswered', payload);
+    }
+  } catch (err) {
+    // Socket emit failure ignored
+  }
+}
+
 async function createQuestion(req, res, next) {
   try {
     const eventId = req.params.eventId || req.body.eventId;
-    const { sessionId, trackId, question, text, authorName } = req.body;
+    const { sessionId, trackId, track, question, text, authorName } = req.body;
+    const rawTrack = trackId || track || null;
 
     const content = (question || text || '').trim();
     if (!content) {
@@ -45,13 +94,17 @@ async function createQuestion(req, res, next) {
     const newQ = await Question.create({
       eventId,
       sessionId: sessionId || null,
-      trackId: trackId ? String(trackId).trim() : null,
+      trackId: rawTrack ? String(rawTrack).trim() : null,
+      track: rawTrack ? String(rawTrack).trim() : null,
       question: content,
       authorName: (authorName || '').trim() || 'Anonymous',
       status: QUESTION_STATUS.PENDING,
       upvotes: 0,
-      upvotedBy: [voterId]
+      upvotedBy: [voterId],
+      isAnswered: false,
     });
+
+    broadcastQuestionEvent('questionSubmitted', newQ);
 
     res.status(201).json({
       success: true,
@@ -66,16 +119,17 @@ async function createQuestion(req, res, next) {
 async function getQuestions(req, res, next) {
   try {
     const eventId = req.params.eventId || req.query.eventId;
-    const { sessionId, trackId, status, sort = 'upvotes' } = req.query;
+    const { sessionId, trackId, track, status, sort = 'upvotes' } = req.query;
+    const targetTrack = trackId || track;
 
     const filter = {};
     if (eventId) filter.eventId = eventId;
     if (sessionId) filter.sessionId = sessionId;
-    if (trackId !== undefined && trackId !== null && trackId !== '') {
-      if (trackId === 'none' || trackId === 'null') {
+    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '') {
+      if (targetTrack === 'none' || targetTrack === 'null') {
         filter.trackId = null;
       } else {
-        filter.trackId = String(trackId).trim();
+        filter.trackId = String(targetTrack).trim();
       }
     }
     if (status && status.toUpperCase() !== 'ALL') {
@@ -109,16 +163,17 @@ async function getQuestions(req, res, next) {
 async function getApprovedFeed(req, res, next) {
   try {
     const eventId = req.params.eventId || req.query.eventId;
-    const { sessionId, trackId } = req.query;
+    const { sessionId, trackId, track } = req.query;
+    const targetTrack = trackId || track;
 
     const filter = { status: QUESTION_STATUS.APPROVED };
     if (eventId) filter.eventId = eventId;
     if (sessionId) filter.sessionId = sessionId;
-    if (trackId !== undefined && trackId !== null && trackId !== '') {
-      if (trackId === 'none' || trackId === 'null') {
+    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '') {
+      if (targetTrack === 'none' || targetTrack === 'null') {
         filter.trackId = null;
       } else {
-        filter.trackId = String(trackId).trim();
+        filter.trackId = String(targetTrack).trim();
       }
     }
 
@@ -181,9 +236,21 @@ async function moderateQuestion(req, res, next) {
     }
 
     question.status = status;
+    question.isAnswered = status === QUESTION_STATUS.ANSWERED;
+    if (status === QUESTION_STATUS.ANSWERED) {
+      question.answeredAt = new Date();
+    }
     question.moderatedBy = req.user?._id || null;
     question.moderatedAt = new Date();
     await question.save();
+
+    if (status === QUESTION_STATUS.APPROVED) {
+      broadcastQuestionEvent('questionApproved', question);
+    } else if (status === QUESTION_STATUS.REJECTED) {
+      broadcastQuestionEvent('questionRejected', question);
+    } else if (status === QUESTION_STATUS.ANSWERED) {
+      broadcastQuestionEvent('questionAnswered', question);
+    }
 
     res.status(200).json({
       success: true,
@@ -213,7 +280,7 @@ async function answerQuestion(req, res, next) {
 async function upvoteQuestion(req, res, next) {
   try {
     const { id } = req.params;
-    const voterId = req.user?._id?.toString() || req.headers['x-client-id'] || req.ip || 'anon_voter';
+    const voterId = req.user?._id?.toString() || req.body.voterId || req.headers['x-client-id'] || req.ip || 'anon_voter';
 
     const question = await Question.findById(id);
     if (!question) {
@@ -229,7 +296,11 @@ async function upvoteQuestion(req, res, next) {
     }
 
     if (question.upvotedBy && question.upvotedBy.includes(voterId)) {
-      return res.status(400).json({ success: false, message: 'You have already upvoted this question' });
+      return res.status(400).json({
+        success: false,
+        message: 'You have already upvoted this question',
+        data: question
+      });
     }
 
     const updated = await Question.findByIdAndUpdate(
@@ -240,6 +311,8 @@ async function upvoteQuestion(req, res, next) {
       },
       { new: true }
     );
+
+    broadcastQuestionEvent('questionUpvoted', updated);
 
     res.status(200).json({
       success: true,

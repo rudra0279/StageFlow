@@ -19,17 +19,41 @@ function initSocket(server) {
     logger.socket(`Client connected: socketId=${socket.id}`);
 
     // Join event room
-    socket.on(CLIENT_EVENTS.JOIN_EVENT, ({ eventId, role }) => {
+    socket.on(CLIENT_EVENTS.JOIN_EVENT, ({ eventId, role, track }) => {
       if (!eventId) {
         logger.socket(`joinEvent failed: missing eventId from socketId=${socket.id}`);
         return;
       }
       const room = getEventRoom(eventId);
       socket.join(room);
+      socket.join(`event_${eventId}`);
+
+      const normRole = (role || 'guest').toUpperCase();
+      if (normRole === 'ORGANIZER') {
+        socket.join(`event_${eventId}_organizers`);
+        socket.join(`event:${eventId}:organizers`);
+      } else if (normRole === 'ANCHOR') {
+        socket.join(`event_${eventId}_anchors`);
+        socket.join(`event:${eventId}:anchors`);
+        if (track) {
+          socket.join(`event_${eventId}_anchors_${track}`);
+          socket.join(`event:${eventId}:anchors:${track}`);
+          socket.join(`event_${eventId}_track_${track}`);
+        }
+      }
+
       logger.socket(`Socket ${socket.id} (role: ${role || 'guest'}) joined room: ${room}`);
 
       // Acknowledge joining
-      socket.emit('joinedEvent', { eventId, room, success: true });
+      socket.emit('joinedEvent', { eventId, room, track: track || null, success: true });
+    });
+
+    socket.on('joinTrack', ({ eventId, track }) => {
+      if (!eventId || !track) return;
+      socket.join(`event_${eventId}_anchors_${track}`);
+      socket.join(`event:${eventId}:anchors:${track}`);
+      socket.join(`event_${eventId}_track_${track}`);
+      socket.emit('joinedTrack', { eventId, track, success: true });
     });
 
     // Leave event room
