@@ -35,6 +35,10 @@ const speakerSchema = new mongoose.Schema(
       default: '',
       help: 'Phonetic spelling for stage anchor (e.g., POH-vahn)'
     },
+    phoneticName: {
+      type: String,
+      default: ''
+    },
     keyAchievements: {
       type: [String],
       default: []
@@ -51,5 +55,15 @@ const speakerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+speakerSchema.pre('save', function(next) {
+  if (!this.phoneticName && this.pronunciationGuide) {
+    this.phoneticName = this.pronunciationGuide;
+  }
+  if (!this.pronunciationGuide && this.phoneticName) {
+    this.pronunciationGuide = this.phoneticName;
+  }
+  next();
+});
 
 export const Speaker = mongoose.model('Speaker', speakerSchema);

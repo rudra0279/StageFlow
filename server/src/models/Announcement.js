@@ -22,7 +22,8 @@ const announcementSchema = new mongoose.Schema(
     urgency: {
       type: String,
       enum: Object.values(URGENCY_LEVEL),
-      default: URGENCY_LEVEL.MEDIUM
+      default: URGENCY_LEVEL.MEDIUM,
+      uppercase: true
     },
     senderRole: {
       type: String,

@@ -5,6 +5,8 @@ import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.post('/generate-script', protect, generateScript);
+router.post('/generate', protect, generateScript);
 router.post('/copilot-query', protect, copilotQuery);
+router.post('/query', protect, copilotQuery);
 
 export default router;

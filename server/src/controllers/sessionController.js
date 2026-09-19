@@ -14,7 +14,16 @@ export const addSession = async (req, res, next) => {
 export const triggerDelay = async (req, res, next) => {
   try {
     const { delayMinutes, reason } = req.body;
-    const { eventId, sessionId } = req.params;
+    let { eventId, sessionId } = req.params;
+
+    if (!eventId) {
+      const sess = await Session.findById(sessionId);
+      if (sess) {
+        eventId = sess.eventId;
+      } else {
+        return res.status(404).json({ success: false, message: 'Session not found' });
+      }
+    }
 
     const result = await applySessionDelay(eventId, sessionId, Number(delayMinutes), reason);
     res.status(200).json({
@@ -29,7 +38,17 @@ export const triggerDelay = async (req, res, next) => {
 
 export const activateSession = async (req, res, next) => {
   try {
-    const { eventId, sessionId } = req.params;
+    let { eventId, sessionId } = req.params;
+
+    if (!eventId) {
+      const sess = await Session.findById(sessionId);
+      if (sess) {
+        eventId = sess.eventId;
+      } else {
+        return res.status(404).json({ success: false, message: 'Session not found' });
+      }
+    }
+
     const result = await startLiveSession(eventId, sessionId);
     res.status(200).json({
       success: true,

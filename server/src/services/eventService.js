@@ -1,5 +1,6 @@
 import { Event } from '../models/Event.js';
 import { Session } from '../models/Session.js';
+import { Speaker } from '../models/Speaker.js';
 import { calculateScheduleHealth } from '../utils/calculateScheduleHealth.js';
 import { addMinutesToDate } from '../utils/timeCalculators.js';
 import { socketService } from './socketService.js';
@@ -17,7 +18,9 @@ export const getFullEventDetails = async (eventId) => {
     .sort({ orderIndex: 1 })
     .populate('speakerId');
 
-  return { event, sessions };
+  const speakers = await Speaker.find({ eventId });
+
+  return { event, sessions, speakers };
 };
 
 /**

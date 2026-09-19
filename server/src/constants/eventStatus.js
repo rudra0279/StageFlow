@@ -28,5 +28,6 @@ export const ANNOUNCEMENT_TYPE = {
 export const URGENCY_LEVEL = {
   LOW: 'LOW',
   MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
   CRITICAL: 'CRITICAL'
 };

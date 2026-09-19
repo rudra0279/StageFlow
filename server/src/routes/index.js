@@ -1,6 +1,7 @@
 import express from 'express';
 import authRoutes from './authRoutes.js';
 import eventRoutes from './eventRoutes.js';
+import sessionRoutes from './sessionRoutes.js';
 import speakerRoutes from './speakerRoutes.js';
 import aiRoutes from './aiRoutes.js';
 import announcementRoutes from './announcementRoutes.js';
@@ -19,6 +20,7 @@ router.get('/health', (req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/events', eventRoutes);
+router.use('/sessions', sessionRoutes);
 router.use('/speakers', speakerRoutes);
 router.use('/ai', aiRoutes);
 router.use('/announcements', announcementRoutes);

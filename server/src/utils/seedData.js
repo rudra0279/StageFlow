@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { connectDB } from '../config/db.js';
 import { ENV } from '../config/env.js';
 import { User } from '../models/User.js';
@@ -9,11 +10,13 @@ import { ScriptLog } from '../models/ScriptLog.js';
 import { ROLES } from '../constants/roles.js';
 import { SESSION_STATUS, HEALTH_STATUS, EVENT_STATUS } from '../constants/eventStatus.js';
 
-const seedDatabase = async () => {
+export const seedDatabase = async (standalone = false) => {
   try {
-    console.log('[Seed] Connecting to MongoDB...');
-    await connectDB();
-    console.log('[Seed] Connected.');
+    if (mongoose.connection.readyState !== 1) {
+      console.log('[Seed] Connecting to MongoDB...');
+      await connectDB();
+      console.log('[Seed] Connected.');
+    }
 
     // Clear old data
     await User.deleteMany({});
@@ -192,11 +195,24 @@ const seedDatabase = async () => {
     console.log(`       Sessions: 4 agenda items`);
     console.log('[Seed] Done! You can now start the application.');
 
-    process.exit(0);
+    if (standalone) {
+      process.exit(0);
+    }
   } catch (error) {
     console.error('[Seed] Error during database seeding:', error);
-    process.exit(1);
+    if (standalone) {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 
-seedDatabase();
+import { fileURLToPath } from 'url';
+const isMain = process.argv[1] && (
+  process.argv[1] === fileURLToPath(import.meta.url) ||
+  process.argv[1].endsWith('seedData.js')
+);
+
+if (isMain) {
+  seedDatabase(true);
+}

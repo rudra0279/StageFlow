@@ -12,10 +12,13 @@ import { saveSessionScript } from '../services/sessionService.js';
 
 export const generateScript = async (req, res, next) => {
   try {
-    const { eventId, sessionId, scriptType, tone = 'professional', customParams = {} } = req.body;
+    let { eventId, sessionId, scriptType, type, tone = 'professional', customParams = {} } = req.body;
 
-    const event = await Event.findById(eventId);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    // Normalize script type alias (e.g. SPEAKER_INTRO -> introduction)
+    let resolvedType = (scriptType || type || 'introduction').toLowerCase();
+    if (resolvedType === 'speaker_intro' || resolvedType === 'speakerintro' || resolvedType === 'intro') {
+      resolvedType = 'introduction';
+    }
 
     let session = null;
     let speaker = null;
@@ -23,7 +26,13 @@ export const generateScript = async (req, res, next) => {
     if (sessionId) {
       session = await Session.findById(sessionId).populate('speakerId');
       speaker = session?.speakerId;
+      if (!eventId && session?.eventId) {
+        eventId = session.eventId;
+      }
     }
+
+    const event = eventId ? await Event.findById(eventId) : await Event.findOne();
+    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
 
     let prompt = '';
     const contextData = {
@@ -38,7 +47,7 @@ export const generateScript = async (req, res, next) => {
       reason: customParams.reason || 'Technical check'
     };
 
-    switch (scriptType) {
+    switch (resolvedType) {
       case 'opening':
         prompt = buildOpeningPrompt(event, tone);
         break;
@@ -47,7 +56,7 @@ export const generateScript = async (req, res, next) => {
         break;
       case 'transition': {
         const nextSession = await Session.findOne({
-          eventId,
+          eventId: event._id,
           orderIndex: { $gt: session?.orderIndex || 0 }
         }).populate('speakerId');
 
@@ -72,26 +81,29 @@ export const generateScript = async (req, res, next) => {
         prompt = buildClosingPrompt(event, customParams.highlights, tone);
         break;
       default:
-        return res.status(400).json({ success: false, message: `Unknown scriptType: ${scriptType}` });
+        return res.status(400).json({ success: false, message: `Unknown scriptType: ${resolvedType}` });
     }
 
     const result = await generateAIScript({
-      eventId,
+      eventId: event._id,
       sessionId,
-      scriptType,
+      scriptType: resolvedType,
       prompt,
       contextData,
       tone
     });
 
     // Auto-save generated script to session if session exists
-    if (sessionId && scriptType !== 'copilot') {
-      await saveSessionScript(sessionId, scriptType, result.script);
+    if (sessionId && resolvedType !== 'copilot') {
+      await saveSessionScript(sessionId, resolvedType, result.script);
     }
 
     res.status(200).json({
       success: true,
-      data: result
+      data: {
+        ...result,
+        script: result.script
+      }
     });
   } catch (error) {
     next(error);

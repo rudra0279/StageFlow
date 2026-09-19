@@ -27,7 +27,7 @@ export const createEvent = async (req, res, next) => {
 
 export const getEventById = async (req, res, next) => {
   try {
-    const { event, sessions } = await getFullEventDetails(req.params.id);
+    const { event, sessions, speakers } = await getFullEventDetails(req.params.id);
     const announcements = await Announcement.find({
       eventId: req.params.id,
       isDismissed: false
@@ -38,6 +38,7 @@ export const getEventById = async (req, res, next) => {
       data: {
         event,
         sessions,
+        speakers: speakers || [],
         announcements
       }
     });
