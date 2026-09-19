@@ -19,15 +19,33 @@ const startServer = async () => {
   // 4. Setup event handlers & rooms
   setupSockets(io);
 
-  // 5. Start listening
-  const server = httpServer.listen(ENV.PORT, () => {
-    logger.info(`=========================================`);
-    logger.info(`🚀 StagePilot Server running on port ${ENV.PORT}`);
-    logger.info(`📡 Socket.IO listening on port ${ENV.PORT}`);
-    logger.info(`🌐 Frontend URL: ${ENV.CLIENT_URL}`);
-    logger.info(`🤖 AI Provider: ${ENV.AI_PROVIDER.toUpperCase()}`);
-    logger.info(`=========================================`);
+  // 5. Start listening with automatic port fallback if occupied
+  let port = Number(ENV.PORT) || 5001;
+  
+  const listen = (currentPort) => {
+    httpServer.listen(currentPort, () => {
+      logger.info(`=========================================`);
+      logger.info(`🚀 StagePilot Server running on port ${currentPort}`);
+      logger.info(`📡 Socket.IO listening on port ${currentPort}`);
+      logger.info(`🌐 Frontend URL: ${ENV.CLIENT_URL}`);
+      logger.info(`🤖 AI Provider: ${ENV.AI_PROVIDER.toUpperCase()}`);
+      logger.info(`=========================================`);
+    });
+  };
+
+  httpServer.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.warn(`Port ${port} is in use (e.g. macOS ControlCenter). Retrying on port ${port + 1}...`);
+      port += 1;
+      setTimeout(() => {
+        listen(port);
+      }, 500);
+    } else {
+      logger.error('Server error:', err);
+    }
   });
+
+  listen(port);
 
   process.on('unhandledRejection', (err) => {
     logger.error('Unhandled Promise Rejection:', err);

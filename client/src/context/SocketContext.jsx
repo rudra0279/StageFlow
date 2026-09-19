@@ -11,7 +11,7 @@ export const SocketProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001';
     const newSocket = io(socketUrl, {
       autoConnect: true,
       reconnectionAttempts: 10,

@@ -2,7 +2,7 @@
 require('dotenv').config();
 
 module.exports = {
-  PORT: process.env.PORT || 5000,
+  PORT: process.env.PORT || 5001,
   NODE_ENV: process.env.NODE_ENV || 'development',
   MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/stagepilot',
   JWT_SECRET: process.env.JWT_SECRET || 'stagepilot_jwt_default_secret_key_2026',
