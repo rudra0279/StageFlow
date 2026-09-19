@@ -176,7 +176,7 @@ async function handleAnnouncement(req, res) {
 
 async function handleAssistant(req, res) {
   try {
-    const { eventId, query, command, tone, maxLength } = req.body;
+    const { eventId, query, command, tone, maxLength, speechContext, speechTracking } = req.body;
     const userQuery = query || command;
 
     if (!userQuery) {
@@ -186,17 +186,23 @@ async function handleAssistant(req, res) {
       });
     }
 
+    const trackingData = speechContext || speechTracking || null;
+    const { analyzeSpeechTracking } = require('../services/ai/aiService');
+    const speechAnalysis = trackingData ? analyzeSpeechTracking(trackingData) : null;
+
     // Step 1: Retrieve current event context before generating answer
     const context = await buildEventContext(eventId, {
       userQuery,
       tone,
       maxLength: maxLength || 120,
+      speechContext: trackingData,
     });
 
     // Step 2: Generate contextual response
     const result = await generateScript('assistant', {
       ...context,
       userQuery,
+      speechContext: trackingData,
     });
 
     if (!result.success) {
@@ -215,11 +221,120 @@ async function handleAssistant(req, res) {
         nextSession: context.nextSession,
         eventHealth: context.eventHealth,
         delayTotalMinutes: context.delayTotalMinutes,
+        speechAnalysis,
         provider: result.provider,
       },
     });
   } catch (error) {
     logger.error('[AI]', 'Error in handleAssistant', error);
+    return res.status(503).json({
+      success: false,
+      message: 'AI service temporarily unavailable',
+    });
+  }
+}
+
+async function handleFiller(req, res) {
+  try {
+    const { eventId, durationSeconds, tone } = req.body;
+    const context = await buildEventContext(eventId, {
+      tone,
+      maxLength: Math.round((durationSeconds || 30) * 2),
+    });
+    const result = await generateScript('filler', context);
+
+    if (!result.success) {
+      return res.status(503).json({
+        success: false,
+        message: result.message || 'AI service temporarily unavailable',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        script: result.script,
+        provider: result.provider,
+        context: result.context,
+      },
+    });
+  } catch (error) {
+    logger.error('[AI]', 'Error in handleFiller', error);
+    return res.status(503).json({
+      success: false,
+      message: 'AI service temporarily unavailable',
+    });
+  }
+}
+
+async function handleEmergency(req, res) {
+  try {
+    const { eventId, message, urgency, tone } = req.body;
+    const context = await buildEventContext(eventId, {
+      rawMessage: message,
+      urgency: urgency || 'CRITICAL',
+      tone: tone || 'authoritative',
+    });
+    const result = await generateScript('emergency', context);
+
+    if (!result.success) {
+      return res.status(503).json({
+        success: false,
+        message: result.message || 'AI service temporarily unavailable',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        script: result.script,
+        provider: result.provider,
+      },
+    });
+  } catch (error) {
+    logger.error('[AI]', 'Error in handleEmergency', error);
+    return res.status(503).json({
+      success: false,
+      message: 'AI service temporarily unavailable',
+    });
+  }
+}
+
+async function handleTeleprompterAssist(req, res) {
+  try {
+    const { eventId, assistType = 'general', speechContext, speechTracking, query } = req.body;
+    const trackingData = speechContext || speechTracking || {};
+    const { analyzeSpeechTracking } = require('../services/ai/aiService');
+    const analysis = analyzeSpeechTracking(trackingData);
+
+    const context = await buildEventContext(eventId, {
+      userQuery: query,
+      speechContext: trackingData,
+    });
+
+    const result = await generateScript('teleprompter_assist', {
+      ...context,
+      speechContext: trackingData,
+    });
+
+    if (!result.success) {
+      return res.status(503).json({
+        success: false,
+        message: result.message || 'AI service temporarily unavailable',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        assistType,
+        suggestion: result.script,
+        analysis,
+        provider: result.provider,
+      },
+    });
+  } catch (error) {
+    logger.error('[AI]', 'Error in handleTeleprompterAssist', error);
     return res.status(503).json({
       success: false,
       message: 'AI service temporarily unavailable',
@@ -234,4 +349,8 @@ module.exports = {
   handleClosing,
   handleAnnouncement,
   handleAssistant,
+  handleFiller,
+  handleEmergency,
+  handleTeleprompterAssist,
 };
+

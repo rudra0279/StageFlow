@@ -24,5 +24,23 @@
   },
   "copilot": {
     "default": "Here is a quick fact for the stage: {speakerName} is known for pioneering work at {speakerCompany}. Mention their recent work on {theme} or ask the audience a quick show-of-hands question to bridge any quiet moment."
+  },
+  "filler": {
+    "professional": "While our stage production team completes a final calibration for \"{sessionTitle}\", let's take a quick look ahead at {theme}. We have an extraordinary day lined up here at {venue}. Check your screens for live schedule updates, and we will welcome our presenter in just a moment.",
+    "energetic": "Keep the energy soaring, everyone! While our crew sets up \"{sessionTitle}\", think about what you've experienced today at {eventTitle}. We have an unforgettable lineup ahead, so stay seated and get ready to be blown away in 30 seconds!",
+    "humorous": "Live production is always full of excitement, and our stage techs are making sure the sound is studio-grade for {speakerName}! While we wait, turn to your neighbor and share your favorite insight from {theme} so far. We are rolling in just a moment!"
+  },
+  "emergency": {
+    "authoritative": "Ladies and gentlemen, may I have your immediate attention from the stage. {emergencyMessage}. Please remain in your seats and follow stage directions as our operations team coordinates this promptly. Thank you for your cooperation.",
+    "calm": "Pardon the brief pause, everyone. Our stage coordinators have a brief update: {emergencyMessage}. Everything is in order, and we will resume our program shortly.",
+    "urgent": "Attention all attendees: please pause and direct your attention to the main stage. {emergencyMessage}. Please remain attentive for further instructions from event security and stage management."
+  },
+  "teleprompter_assist": {
+    "pace_fast": "You are currently speaking at approximately {wordsPerMinute} WPM, which is fast for the teleprompter. Take a calm breath and allow brief pauses at punctuation.",
+    "pace_slow": "Your speaking pace is currently {wordsPerMinute} WPM, slightly under target. Pick up your momentum slightly while keeping delivery crisp.",
+    "pace_good": "Pace is optimal ({wordsPerMinute} WPM). Clear, authoritative, and well-synchronized with the teleprompter.",
+    "missed_script": "You bypassed the point about \"{missedPhrase}\". Smoothly recover by saying: \"{recoveryLine}\"",
+    "next_line": "Next line to read: \"{nextLine}\"",
+    "default": "Speech tracking active. Currently on track at {wordsPerMinute} WPM. Next line: \"{nextLine}\""
   }
 }

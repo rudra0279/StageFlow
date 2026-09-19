@@ -92,6 +92,7 @@ async function buildEventContext(eventId, overrides = {}) {
       organization: currentSpeaker.organization,
       topic: currentSpeaker.topic,
       bio: currentSpeaker.bio,
+      pronunciationGuide: currentSpeaker.pronunciationGuide || overrides.pronunciationGuide || null,
     } : overrides.currentSpeaker || null,
     nextSession: nextSession ? {
       id: nextSession._id,
@@ -103,6 +104,7 @@ async function buildEventContext(eventId, overrides = {}) {
       endTime: nextSession.endTime,
       speakerName: nextSession.speakerId ? nextSession.speakerId.name : null,
       speakerDesignation: nextSession.speakerId ? nextSession.speakerId.designation : null,
+      speakerPronunciation: nextSession.speakerId ? nextSession.speakerId.pronunciationGuide : null,
     } : overrides.nextSession || null,
     scheduleChanges,
     tone: overrides.tone || 'professional and engaging',
@@ -110,6 +112,7 @@ async function buildEventContext(eventId, overrides = {}) {
     rawMessage: overrides.rawMessage || overrides.message || null,
     announcementType: overrides.announcementType || overrides.type || 'GENERAL',
     delayMinutes: overrides.delayMinutes !== undefined ? overrides.delayMinutes : (event ? event.delayTotalMinutes : 0),
+    speechContext: overrides.speechContext || overrides.speechTracking || null,
   };
 
   return context;
