@@ -20,6 +20,11 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: 'Main Stage'
     },
+    category: {
+      type: String,
+      enum: ['hackathon', 'workshop', 'seminar', 'competition', 'cultural', 'other'],
+      default: 'hackathon'
+    },
     organizerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

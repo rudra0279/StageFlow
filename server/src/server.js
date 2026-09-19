@@ -20,13 +20,23 @@ const startServer = async () => {
   setupSockets(io);
 
   // 5. Start listening
-  httpServer.listen(ENV.PORT, () => {
+  const server = httpServer.listen(ENV.PORT, () => {
     logger.info(`=========================================`);
     logger.info(`🚀 StagePilot Server running on port ${ENV.PORT}`);
     logger.info(`📡 Socket.IO listening on port ${ENV.PORT}`);
     logger.info(`🌐 Frontend URL: ${ENV.CLIENT_URL}`);
     logger.info(`🤖 AI Provider: ${ENV.AI_PROVIDER.toUpperCase()}`);
     logger.info(`=========================================`);
+  });
+
+  process.on('unhandledRejection', (err) => {
+    logger.error('Unhandled Promise Rejection:', err);
+    server.close(() => process.exit(1));
+  });
+
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM received. Shutting down gracefully...');
+    server.close(() => process.exit(0));
   });
 };
 

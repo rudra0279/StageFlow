@@ -22,6 +22,10 @@ const speakerSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    organization: {
+      type: String,
+      default: ''
+    },
     bio: {
       type: String,
       default: ''

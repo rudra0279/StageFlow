@@ -3,6 +3,8 @@ import {
   getEvents,
   createEvent,
   getEventById,
+  updateEvent,
+  deleteEvent,
   setStatus,
   broadcastAnnouncement
 } from '../controllers/eventController.js';
@@ -24,7 +26,9 @@ router.route('/')
   .post(protect, authorize(ROLES.ORGANIZER), validate(createEventSchema), createEvent);
 
 router.route('/:id')
-  .get(protect, getEventById);
+  .get(protect, getEventById)
+  .patch(protect, authorize(ROLES.ORGANIZER), updateEvent)
+  .delete(protect, authorize(ROLES.ORGANIZER), deleteEvent);
 
 router.patch(
   '/:id/status',

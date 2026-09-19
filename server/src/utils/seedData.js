@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import { connectDB } from '../config/db.js';
 import { ENV } from '../config/env.js';
 import { User } from '../models/User.js';
 import { Event } from '../models/Event.js';
@@ -12,7 +12,7 @@ import { SESSION_STATUS, HEALTH_STATUS, EVENT_STATUS } from '../constants/eventS
 const seedDatabase = async () => {
   try {
     console.log('[Seed] Connecting to MongoDB...');
-    await mongoose.connect(ENV.MONGODB_URI);
+    await connectDB();
     console.log('[Seed] Connected.');
 
     // Clear old data

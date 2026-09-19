@@ -22,7 +22,7 @@ export const createAgendaItem = async (req, res, next) => {
   try {
     const session = await Session.create({
       ...req.body,
-      calculatedStartTime: req.body.scheduledStartTime
+      calculatedStartTime: req.body.calculatedStartTime || req.body.scheduledStartTime
     });
 
     const populated = await Session.findById(session._id).populate('speakerId');
