@@ -33,6 +33,11 @@ const SpeakerSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    pronunciationGuide: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     photo: {
       type: String,
       default: '',

@@ -11,6 +11,10 @@ router.post('/introduction', aiController.handleIntroduction);
 router.post('/transition', aiController.handleTransition);
 router.post('/closing', aiController.handleClosing);
 router.post('/announcement', aiController.handleAnnouncement);
+router.post('/filler', aiController.handleFiller);
+router.post('/emergency', aiController.handleEmergency);
+router.post('/teleprompter-assist', aiController.handleTeleprompterAssist);
 router.post('/assistant', aiController.handleAssistant);
 
 module.exports = router;
+
