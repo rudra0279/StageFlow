@@ -4,23 +4,6 @@ const Event = require('../models/Event');
 const Agenda = require('../models/Agenda');
 const { generateScript } = require('../services/ai/aiService');
 
-/** Safe non-crashing socket emit — silently skips if socket not initialized */
-function emitToEvent(eventId, eventName, payload, options = {}) {
-  try {
-    const { getIO } = require('../socket/socketServer');
-    const { getEventRoom } = require('../socket/socketEvents');
-    const io = getIO();
-    const mainRoom = getEventRoom(eventId);
-    if (options.organizerOnly) {
-      io.to(`${mainRoom}:organizers`).emit(eventName, payload);
-    } else if (options.anchorOnly) {
-      io.to(`${mainRoom}:anchors`).emit(eventName, payload);
-    } else {
-      io.to(mainRoom).emit(eventName, payload);
-    }
-  } catch (_) { /* Socket.IO not initialized in test — non-fatal */ }
-}
-
 const QUESTION_STATUS = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
@@ -48,19 +31,90 @@ function resolveTrack(track, trackId) {
 function serializeQuestion(doc) {
   if (!doc) return doc;
   const obj = typeof doc.toJSON === 'function' ? doc.toJSON() : { ...doc };
-  // Remove internal save/toJSON methods if raw object
   delete obj.save;
-  // track alias
   obj.track = obj.trackId || obj.track || null;
-  // upvoters alias
+  obj.trackId = obj.trackId || obj.track || null;
   obj.upvoters = obj.upvotedBy || obj.upvoters || [];
-  // isAnswered virtual
+  obj.upvotedBy = obj.upvoters;
   obj.isAnswered = obj.status === QUESTION_STATUS.ANSWERED;
-  // answeredAt
   if (obj.isAnswered && !obj.answeredAt) {
     obj.answeredAt = obj.moderatedAt || obj.updatedAt || null;
   }
   return obj;
+}
+
+function broadcastQuestionEvent(eventName, questionDoc, options = {}) {
+  try {
+    const { getIO } = require('../socket/socketServer');
+    const io = getIO();
+    if (!io) return;
+    const qData = serializeQuestion(questionDoc);
+
+    const eventId = qData.eventId ? qData.eventId.toString() : '';
+    const track = qData.track || qData.trackId || null;
+
+    const payload = {
+      question: qData,
+      questionId: qData._id,
+      status: qData.status,
+      isAnswered: qData.isAnswered,
+      upvotes: qData.upvotes,
+      track: track,
+      eventId: eventId
+    };
+
+    const mainRoom = `event:${eventId}`;
+    const legacyMain = `event_${eventId}`;
+    const orgRoom = `event_${eventId}_organizers`;
+    const orgRoom2 = `event:${eventId}:organizers`;
+    const orgRoom3 = `event_${eventId}:organizers`;
+    const anchorRoom = `event_${eventId}_anchors`;
+    const anchorRoom2 = `event:${eventId}:anchors`;
+    const anchorRoom3 = `event_${eventId}:anchors`;
+
+    if (eventName === 'questionSubmitted' || options.organizerOnly) {
+      io.to(orgRoom).to(orgRoom2).to(orgRoom3).emit(eventName, payload);
+    } else if (eventName === 'questionApproved') {
+      let emitter = io.to(mainRoom).to(legacyMain).to(orgRoom).to(orgRoom2).to(anchorRoom).to(anchorRoom2);
+      if (track) {
+        emitter = emitter.to(`event_${eventId}_anchors_${track}`).to(`event:${eventId}:anchors:${track}`).to(`event_${eventId}:track:${track}`);
+      }
+      emitter.emit(eventName, payload);
+    } else if (eventName === 'questionRejected') {
+      io.to(orgRoom).to(orgRoom2).to(orgRoom3).emit(eventName, payload);
+    } else if (eventName === 'questionUpvoted') {
+      let emitter = io.to(mainRoom).to(legacyMain).to(orgRoom).to(orgRoom2).to(anchorRoom).to(anchorRoom2);
+      if (track) {
+        emitter = emitter.to(`event_${eventId}_anchors_${track}`).to(`event:${eventId}:anchors:${track}`).to(`event_${eventId}:track:${track}`);
+      }
+      emitter.emit(eventName, payload);
+    } else if (eventName === 'questionAnswered') {
+      let emitter = io.to(mainRoom).to(legacyMain).to(orgRoom).to(orgRoom2).to(anchorRoom).to(anchorRoom2);
+      if (track) {
+        emitter = emitter.to(`event_${eventId}_anchors_${track}`).to(`event:${eventId}:anchors:${track}`).to(`event_${eventId}:track:${track}`);
+      }
+      emitter.emit(eventName, payload);
+    }
+  } catch (err) {
+    // Socket emit failure ignored
+  }
+}
+
+/** Safe non-crashing socket emit — silently skips if socket not initialized */
+function emitToEvent(eventId, eventName, payload, options = {}) {
+  try {
+    const { getIO } = require('../socket/socketServer');
+    const { getEventRoom } = require('../socket/socketEvents');
+    const io = getIO();
+    const mainRoom = getEventRoom(eventId);
+    if (options.organizerOnly) {
+      io.to(`${mainRoom}:organizers`).emit(eventName, payload);
+    } else if (options.anchorOnly) {
+      io.to(`${mainRoom}:anchors`).emit(eventName, payload);
+    } else {
+      io.to(mainRoom).emit(eventName, payload);
+    }
+  } catch (_) { /* Socket.IO not initialized in test — non-fatal */ }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -69,7 +123,8 @@ function serializeQuestion(doc) {
 async function createQuestion(req, res, next) {
   try {
     const eventId = req.params.eventId || req.body.eventId;
-    const { sessionId, trackId, track, question, text, authorName } = req.body;
+    const { sessionId, trackId, track, question, text, authorName, voterId: bodyVoterId } = req.body;
+    const voterId = bodyVoterId || req.user?._id?.toString() || null;
 
     const content = (question || text || '').trim();
     if (!content) {
@@ -113,19 +168,13 @@ async function createQuestion(req, res, next) {
       authorName: (authorName || '').trim() || 'Anonymous',
       status: QUESTION_STATUS.PENDING,
       upvotes: 0,
-      upvotedBy: [],
-      upvoters: [],
+      upvotedBy: voterId ? [voterId] : [],
+      upvoters: voterId ? [voterId] : [],
       isAnswered: false,
       answeredAt: null
     });
 
-    // Emit to organizer room only — questionSubmitted
-    try {
-      emitToEvent(eventId, 'questionSubmitted', {
-        question: serializeQuestion(newQ),
-        status: QUESTION_STATUS.PENDING
-      }, { organizerOnly: true });
-    } catch (_) { /* non-fatal if socket not initialized */ }
+    broadcastQuestionEvent('questionSubmitted', newQ, { organizerOnly: true });
 
     res.status(201).json({
       success: true,
@@ -144,10 +193,19 @@ async function getQuestions(req, res, next) {
   try {
     const eventId = req.params.eventId || req.query.eventId;
     const { sessionId, trackId, track, status, sortBy, sort = sortBy || 'upvotes' } = req.query;
+    const targetTrack = trackId || track;
 
     const filter = {};
     if (eventId) filter.eventId = eventId;
     if (sessionId) filter.sessionId = sessionId;
+
+    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '') {
+      if (targetTrack === 'none' || targetTrack === 'null') {
+        filter.trackId = null;
+      } else {
+        filter.trackId = String(targetTrack).trim();
+      }
+    }
 
     if (status && status.toUpperCase() !== 'ALL') {
       const normStatus = status.toUpperCase();
@@ -193,10 +251,19 @@ async function getApprovedFeed(req, res, next) {
   try {
     const eventId = req.params.eventId || req.query.eventId;
     const { sessionId, trackId, track } = req.query;
+    const targetTrack = trackId || track;
 
     const filter = { status: QUESTION_STATUS.APPROVED };
     if (eventId) filter.eventId = eventId;
     if (sessionId) filter.sessionId = sessionId;
+
+    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '') {
+      if (targetTrack === 'none' || targetTrack === 'null') {
+        filter.trackId = null;
+      } else {
+        filter.trackId = String(targetTrack).trim();
+      }
+    }
 
     let questions = await Question.find(filter);
 
@@ -318,29 +385,13 @@ async function moderateQuestion(req, res, next) {
 
     const serialized = serializeQuestion(question);
 
-    // Emit real-time events
-    try {
-      if (status === QUESTION_STATUS.APPROVED) {
-        emitToEvent(question.eventId, 'questionApproved', {
-          questionId: question._id,
-          status: QUESTION_STATUS.APPROVED,
-          question: serialized,
-          track: question.trackId || question.track
-        });
-      } else if (status === QUESTION_STATUS.REJECTED) {
-        emitToEvent(question.eventId, 'questionRejected', {
-          questionId: question._id,
-          status: QUESTION_STATUS.REJECTED,
-          track: question.trackId || question.track
-        }, { organizerOnly: true });
-      } else if (status === QUESTION_STATUS.ANSWERED) {
-        emitToEvent(question.eventId, 'questionAnswered', {
-          questionId: question._id,
-          status: QUESTION_STATUS.ANSWERED,
-          track: question.trackId || question.track
-        });
-      }
-    } catch (_) { /* non-fatal */ }
+    if (status === QUESTION_STATUS.APPROVED) {
+      broadcastQuestionEvent('questionApproved', question);
+    } else if (status === QUESTION_STATUS.REJECTED) {
+      broadcastQuestionEvent('questionRejected', question, { organizerOnly: true });
+    } else if (status === QUESTION_STATUS.ANSWERED) {
+      broadcastQuestionEvent('questionAnswered', question);
+    }
 
     res.status(200).json({
       success: true,
@@ -373,7 +424,6 @@ async function answerQuestion(req, res, next) {
 async function upvoteQuestion(req, res, next) {
   try {
     const { id } = req.params;
-    // Accept voterId from body (tests send it explicitly)
     const voterId = req.body.voterId ||
       req.user?._id?.toString() ||
       req.headers['x-client-id'] ||
@@ -407,21 +457,13 @@ async function upvoteQuestion(req, res, next) {
       id,
       {
         $inc: { upvotes: 1 },
-        $addToSet: { upvotedBy: voterId }
+        $addToSet: { upvotedBy: voterId, upvoters: voterId }
       },
       { new: true }
     );
 
     const serialized = serializeQuestion(updated);
-
-    // Emit real-time update
-    try {
-      emitToEvent(question.eventId, 'questionUpvoted', {
-        questionId: question._id,
-        upvotes: serialized.upvotes,
-        track: question.trackId || question.track
-      });
-    } catch (_) { /* non-fatal */ }
+    broadcastQuestionEvent('questionUpvoted', updated);
 
     res.status(200).json({
       success: true,

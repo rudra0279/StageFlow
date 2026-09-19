@@ -21,8 +21,14 @@ const startServer = async () => {
 
   // 5. Start listening with automatic port fallback if occupied
   let port = Number(ENV.PORT) || 5001;
-  
+  let attempts = 0;
+  const MAX_ATTEMPTS = 3;
+
   const listen = (currentPort) => {
+    // Guard: don't try to listen if already listening
+    if (httpServer.listening) {
+      return;
+    }
     httpServer.listen(currentPort, () => {
       logger.info(`=========================================`);
       logger.info(`🚀 StagePilot Server running on port ${currentPort}`);
@@ -34,14 +40,16 @@ const startServer = async () => {
   };
 
   httpServer.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      logger.warn(`Port ${port} is in use (e.g. macOS ControlCenter). Retrying on port ${port + 1}...`);
+    if (err.code === 'EADDRINUSE' && attempts < MAX_ATTEMPTS) {
+      attempts += 1;
+      logger.warn(`Port ${port} is in use. Retrying on port ${port + 1}... (attempt ${attempts}/${MAX_ATTEMPTS})`);
+      // Close the server cleanly before re-binding
+      httpServer.closeAllConnections?.();
       port += 1;
-      setTimeout(() => {
-        listen(port);
-      }, 500);
+      setTimeout(() => listen(port), 500);
     } else {
       logger.error('Server error:', err);
+      process.exit(1);
     }
   });
 

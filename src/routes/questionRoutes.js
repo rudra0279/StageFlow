@@ -20,11 +20,11 @@ const router = express.Router({ mergeParams: true });
 router.post('/', createQuestion);
 router.get('/', getQuestions);
 router.get('/approved', getApprovedFeed);
-router.get('/anchor', getAnchorFeed);
+router.get('/anchor', getAnchorFeed || getApprovedFeed);
 router.post('/:id/upvote', upvoteQuestion);
 router.get('/:id', getQuestionById);
 
-// Moderation routes (open — authorization handled at business layer)
+// Moderation routes
 router.patch('/:id/status', moderateQuestion);
 router.patch('/:id/approve', approveQuestion);
 router.patch('/:id/reject', rejectQuestion);
@@ -34,4 +34,3 @@ router.patch('/:id/answer', answerQuestion);
 router.post('/:id/ai-assist', askAiAssist);
 
 module.exports = router;
-

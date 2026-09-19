@@ -51,4 +51,5 @@ app.use('*', (req, res) => {
 // Centralized error handling
 app.use(errorHandler);
 
+app.default = app;
 export default app;

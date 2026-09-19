@@ -18,7 +18,13 @@ const collections = {
 function matchesFilter(item, filter = {}) {
   if (!filter || Object.keys(filter).length === 0) return true;
 
+  if (filter.$or && Array.isArray(filter.$or)) {
+    const matchedOr = filter.$or.some(subFilter => matchesFilter(item, subFilter));
+    if (!matchedOr) return false;
+  }
+
   for (const [key, val] of Object.entries(filter)) {
+    if (key === '$or') continue;
     const itemVal = item[key];
     const itemValStr = itemVal !== undefined && itemVal !== null ? itemVal.toString() : '';
 
@@ -82,6 +88,12 @@ function createDocInstance(modelName, data) {
     instance.comparePassword = async function (candidatePassword) {
       return bcrypt.compare(candidatePassword, instance.password);
     };
+  }
+
+  if (modelName === 'Question') {
+    instance.isAnswered = instance.status === 'ANSWERED';
+    if (!instance.track && instance.trackId) instance.track = instance.trackId;
+    if (!instance.trackId && instance.track) instance.trackId = instance.track;
   }
 
   return instance;

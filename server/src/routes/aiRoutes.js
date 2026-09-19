@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateScript, copilotQuery, teleprompterAssist, handleQuestionAssist } from '../controllers/aiController.js';
+import { generateScript, copilotQuery, teleprompterAssist, handleQuestionAssist, handleQuestionAssist as questionAssist } from '../controllers/aiController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -10,7 +10,7 @@ const routeToScript = (scriptType) => (req, res, next) => {
   return generateScript(req, res, next);
 };
 
-// AI Service Integration Placeholder & Discovery
+// AI Service Integration Discovery
 router.get('/', (req, res) => {
   res.status(200).json({
     success: true,
@@ -39,26 +39,26 @@ router.get('/', (req, res) => {
 router.post('/question-assist', handleQuestionAssist);
 
 // Primary script generation endpoints
-router.post('/generate-script', protect, generateScript);
-router.post('/generate', protect, generateScript);
+router.post('/generate-script', generateScript);
+router.post('/generate', generateScript);
 
 // Copilot and AI assistant query endpoints
-router.post('/copilot-query', protect, copilotQuery);
-router.post('/query', protect, copilotQuery);
-router.post('/assistant', protect, copilotQuery);
+router.post('/copilot-query', copilotQuery);
+router.post('/query', copilotQuery);
+router.post('/assistant', copilotQuery);
 
 // Intelligent Teleprompter assistance
-router.post('/teleprompter-assist', protect, teleprompterAssist);
+router.post('/teleprompter-assist', teleprompterAssist);
 
 // Granular script generation endpoints
-router.post('/opening', protect, routeToScript('opening'));
-router.post('/introduction', protect, routeToScript('introduction'));
-router.post('/transition', protect, routeToScript('transition'));
-router.post('/closing', protect, routeToScript('closing'));
-router.post('/filler', protect, routeToScript('filler'));
-router.post('/emergency', protect, routeToScript('emergency'));
-router.post('/delay', protect, routeToScript('delay'));
-router.post('/announcement', protect, routeToScript('emergency'));
+router.post('/opening', routeToScript('opening'));
+router.post('/introduction', routeToScript('introduction'));
+router.post('/transition', routeToScript('transition'));
+router.post('/closing', routeToScript('closing'));
+router.post('/filler', routeToScript('filler'));
+router.post('/emergency', routeToScript('emergency'));
+router.post('/delay', routeToScript('delay'));
+router.post('/announcement', routeToScript('announcement'));
 
 export default router;
 

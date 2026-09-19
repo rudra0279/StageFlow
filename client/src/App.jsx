@@ -12,6 +12,8 @@ import { EventDashboard } from './pages/organizer/EventDashboard';
 import { LiveAnchorView } from './pages/anchor/LiveAnchorView';
 import { NotFoundPage } from './pages/NotFoundPage';
 
+import { AudienceQAView } from './pages/AudienceQAView';
+
 export function App() {
   return (
     <AuthProvider>
@@ -25,6 +27,11 @@ export function App() {
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
+
+                  {/* Audience Q&A Route */}
+                  <Route path="/qa" element={<AudienceQAView />} />
+                  <Route path="/qa/:id" element={<AudienceQAView />} />
+                  <Route path="/events/:id/qa" element={<AudienceQAView />} />
 
                   {/* Organizer Routes */}
                   <Route path="/organizer" element={<EventsListPage />} />

@@ -82,7 +82,7 @@ export const submitQuestion = async ({
     upvotedBy: voterId ? [voterId] : []
   });
 
-  // Real-time broadcast to organizers ONLY
+  // Real-time broadcast to Organizers only (Anchor station must NOT receive unmoderated pending questions)
   const payload = {
     question: newQuestion,
     questionId: newQuestion._id,
@@ -92,6 +92,11 @@ export const submitQuestion = async ({
     track: newQuestion.trackId,
     status: 'PENDING'
   };
+
+  if (typeof socketService.emitToOrganizers === 'function') {
+    socketService.emitToOrganizers(eventId, 'questionSubmitted', payload);
+    if (SOCKET_EVENTS?.NEW_QUESTION) socketService.emitToOrganizers(eventId, SOCKET_EVENTS.NEW_QUESTION, payload);
+  }
   socketService.emitToEvent(eventId, 'questionSubmitted', payload, { organizerOnly: true });
   socketService.emitToEvent(eventId, 'new_question', payload, { organizerOnly: true });
 
@@ -105,6 +110,7 @@ export const getQuestions = async ({
   track = null,
   status = null,
   sort = 'upvotes',
+  sortBy = null,
   limit = 50,
   page = 1
 }) => {
@@ -130,11 +136,12 @@ export const getQuestions = async ({
   }
 
   // Strict Track Scoping
-  if (activeTrack !== null && activeTrack !== undefined && activeTrack !== '') {
-    if (activeTrack === 'none' || activeTrack === 'null') {
+  const resolvedTrack = activeTrack;
+  if (resolvedTrack !== null && resolvedTrack !== undefined && resolvedTrack !== '') {
+    if (resolvedTrack === 'none' || resolvedTrack === 'null') {
       query.$or = [{ trackId: null }, { trackId: '' }];
     } else {
-      query.trackId = String(activeTrack).trim();
+      query.trackId = String(resolvedTrack).trim();
     }
   }
 
@@ -148,9 +155,10 @@ export const getQuestions = async ({
     query.status = normalizedStatus;
   }
 
+  const activeSort = sortBy || sort;
   let sortOption = { upvotes: -1, createdAt: -1 };
-  if (sort === 'newest') sortOption = { createdAt: -1 };
-  if (sort === 'oldest') sortOption = { createdAt: 1 };
+  if (activeSort === 'newest') sortOption = { createdAt: -1 };
+  if (activeSort === 'oldest') sortOption = { createdAt: 1 };
 
   const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
   const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
@@ -253,18 +261,21 @@ export const moderateQuestion = async ({
   question.status = normalizedStatus;
   question.moderatedBy = userId || null;
   question.moderatedAt = new Date();
+  if (normalizedStatus === QUESTION_STATUS.ANSWERED) {
+    question.answeredAt = new Date();
+  }
   await question.save();
 
   // Real-time dispatch according to moderation state
   if (normalizedStatus === QUESTION_STATUS.APPROVED) {
     const payload = {
-      question,
       questionId: question._id,
+      status: QUESTION_STATUS.APPROVED,
+      question,
       eventId: question.eventId,
       sessionId: question.sessionId,
       trackId: question.trackId,
-      track: question.trackId,
-      status: QUESTION_STATUS.APPROVED
+      track: question.trackId
     };
     socketService.emitToEvent(question.eventId, 'questionApproved', payload, {
       track: question.trackId,
@@ -274,29 +285,48 @@ export const moderateQuestion = async ({
       track: question.trackId,
       trackId: question.trackId
     });
+    socketService.emitToEvent(question.eventId, 'questionApproved', payload);
+    if (SOCKET_EVENTS?.QUESTION_APPROVED) {
+      socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_APPROVED, payload);
+    }
+    if (typeof socketService.emitToAnchors === 'function') {
+      socketService.emitToAnchors(question.eventId, 'questionApproved', payload);
+    }
   } else if (normalizedStatus === QUESTION_STATUS.REJECTED) {
     const payload = {
       questionId: question._id,
       status: QUESTION_STATUS.REJECTED,
+      question,
       eventId: question.eventId
     };
+    // Broadcast ONLY to Organizers
+    if (typeof socketService.emitToOrganizers === 'function') {
+      socketService.emitToOrganizers(question.eventId, 'questionRejected', payload);
+      if (SOCKET_EVENTS?.QUESTION_REJECTED) {
+        socketService.emitToOrganizers(question.eventId, SOCKET_EVENTS.QUESTION_REJECTED, payload);
+      }
+    }
     socketService.emitToEvent(question.eventId, 'questionRejected', payload, { organizerOnly: true });
     socketService.emitToEvent(question.eventId, 'question_rejected', payload, { organizerOnly: true });
   } else if (normalizedStatus === QUESTION_STATUS.ANSWERED) {
     const payload = {
       questionId: question._id,
       status: QUESTION_STATUS.ANSWERED,
+      question,
       eventId: question.eventId,
       isAnswered: true
     };
     socketService.emitToEvent(question.eventId, 'questionAnswered', payload);
     socketService.emitToEvent(question.eventId, 'question_answered', payload);
+    if (SOCKET_EVENTS?.QUESTION_ANSWERED) {
+      socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_ANSWERED, payload);
+    }
   }
 
   return question;
 };
 
-export const upvoteQuestion = async ({ questionId, voterId }) => {
+export const upvoteQuestion = async ({ questionId, voterId, allowIdempotent = false }) => {
   if (!questionId || !mongoose.isValidObjectId(questionId)) {
     const err = new Error('Invalid question ID format');
     err.statusCode = 400;
@@ -325,6 +355,9 @@ export const upvoteQuestion = async ({ questionId, voterId }) => {
   // Lightweight anti-abuse protection against repeated upvoting
   const identifier = String(voterId || 'anonymous').trim();
   if (question.upvotedBy && question.upvotedBy.includes(identifier)) {
+    if (allowIdempotent) {
+      return question;
+    }
     const err = new Error('You have already upvoted this question');
     err.statusCode = 400;
     err.question = question;
@@ -357,6 +390,12 @@ export const upvoteQuestion = async ({ questionId, voterId }) => {
     track: updated.trackId,
     trackId: updated.trackId
   });
+
+  // Broadcast upvote update in real time to all in room
+  socketService.emitToEvent(question.eventId, 'questionUpvoted', payload);
+  if (SOCKET_EVENTS?.QUESTION_UPVOTED) {
+    socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_UPVOTED, payload);
+  }
 
   return updated;
 };

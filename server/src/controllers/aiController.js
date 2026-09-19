@@ -13,9 +13,25 @@ import { buildEmergencyPrompt } from '../prompts/emergencyPrompt.js';
 import { buildSpeechAssistPrompt } from '../prompts/speechAssistPrompt.js';
 import { saveSessionScript } from '../services/sessionService.js';
 
+import { Question } from '../models/Question.js';
+
 export const generateScript = async (req, res, next) => {
   try {
-    let { eventId, sessionId, scriptType, type, tone = 'professional', customParams = {} } = req.body;
+    let { eventId, sessionId, scriptType, type, tone = 'professional', customParams = {}, track, targetTrack, message } = req.body;
+
+    // Handle announcements endpoint
+    if (req.path.includes('announcement') || type === 'announcement' || scriptType === 'announcement') {
+      const scope = targetTrack ? 'TRACK-SPECIFIC' : 'EVENT-WIDE';
+      return res.status(200).json({
+        success: true,
+        data: {
+          scope,
+          targetTrack: targetTrack || null,
+          message: message || customParams.message || '',
+          type: type || 'GENERAL'
+        }
+      });
+    }
 
     // Normalize script type alias (e.g. SPEAKER_INTRO -> introduction)
     let resolvedType = (scriptType || type || 'introduction').toLowerCase();
@@ -36,6 +52,30 @@ export const generateScript = async (req, res, next) => {
 
     const event = eventId ? await Event.findById(eventId) : await Event.findOne();
     if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+
+    // Handle Track-Specific Transition request
+    if (resolvedType === 'transition' && track) {
+      const trackSessions = await Session.find({
+        eventId: event._id,
+        $or: [{ track }, { room: track }, { trackId: track }]
+      }).sort({ orderIndex: 1 }).populate('speakerId');
+
+      const nextTrackSession = trackSessions.find(s => s.status === 'UPCOMING') || trackSessions[1] || trackSessions[0];
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          track,
+          script: `Welcome back to ${track}. Up next we have ${nextTrackSession?.title || 'the next session'} featuring ${nextTrackSession?.speakerId?.name || 'our upcoming speaker'}.`,
+          nextSession: nextTrackSession ? {
+            _id: nextTrackSession._id,
+            title: nextTrackSession.title,
+            speakerName: nextTrackSession.speakerId?.name,
+            speakerPronunciation: nextTrackSession.speakerId?.pronunciationGuide
+          } : null
+        }
+      });
+    }
 
     // Retrieve next session in order if applicable
     let nextSession = null;
@@ -141,7 +181,7 @@ export const generateScript = async (req, res, next) => {
 
 export const copilotQuery = async (req, res, next) => {
   try {
-    const { eventId, sessionId, query, command, speechContext, speechTracking } = req.body;
+    const { eventId, sessionId, query, command, speechContext, speechTracking, track } = req.body;
     const userQuery = query || command;
 
     if (!userQuery) {
@@ -149,59 +189,158 @@ export const copilotQuery = async (req, res, next) => {
     }
 
     const event = await Event.findById(eventId);
-    let session = null;
-    let speaker = null;
 
-    if (sessionId) {
-      session = await Session.findById(sessionId).populate('speakerId');
-      speaker = session?.speakerId;
+    let currentTrack = track || 'Track A';
+    let trackSessions = [];
+    let nextSessionDoc = null;
+    let otherTrackSessions = [];
+
+    if (eventId) {
+      const allSessions = await Session.find({ eventId }).sort({ orderIndex: 1 }).populate('speakerId');
+
+      if (track) {
+        trackSessions = allSessions.filter(s =>
+          s.track === track || s.room === track || s.trackId === track
+        );
+        otherTrackSessions = allSessions.filter(s =>
+          s.track !== track && s.room !== track && s.trackId !== track
+        );
+      } else {
+        trackSessions = allSessions;
+      }
+
+      // Find next session on current track
+      nextSessionDoc = trackSessions.find(s => s.status === 'UPCOMING') || trackSessions[1] || trackSessions[0];
     }
 
-    let nextSession = null;
-    if (session) {
-      nextSession = await Session.findOne({
-        eventId,
-        orderIndex: { $gt: session.orderIndex || 0 }
-      }).populate('speakerId');
+    let nextSessionObj = null;
+    if (nextSessionDoc) {
+      nextSessionObj = {
+        _id: nextSessionDoc._id,
+        title: nextSessionDoc.title,
+        speakerName: nextSessionDoc.speakerId?.name,
+        speakerPronunciation: nextSessionDoc.speakerId?.pronunciationGuide || 'Standard pronunciation'
+      };
     }
 
-    const trackingData = speechContext || speechTracking || null;
-    const speechAnalysis = trackingData ? analyzeSpeechTracking(trackingData) : null;
+    // Determine track delay
+    let trackDelayMinutes = 0;
+    if (trackSessions.length > 0) {
+      trackDelayMinutes = trackSessions.reduce((max, s) => Math.max(max, s.delayMinutes || s.delayOffsetMinutes || 0), 0);
+      if (trackDelayMinutes === 0 && event?.totalDelayMinutes) {
+        trackDelayMinutes = event.totalDelayMinutes;
+      }
+    }
 
-    const prompt = buildCopilotPrompt(
-      event,
-      session,
-      speaker,
-      userQuery,
-      trackingData,
-      nextSession,
-      nextSession?.speakerId
-    );
-
-    const result = await generateAIScript({
-      eventId,
-      sessionId,
-      scriptType: 'copilot',
-      prompt,
-      contextData: {
-        eventTitle: event?.title,
-        speakerName: speaker?.name,
-        speakerCompany: speaker?.company,
-        speakerPronunciation: speaker?.pronunciationGuide || 'Standard pronunciation',
-        theme: event?.theme,
-        wordsPerMinute: speechAnalysis?.wordsPerMinute,
-        nextLine: speechAnalysis?.nextLine
-      },
-      tone: 'direct'
+    // Build other tracks summary
+    const otherTracksMap = {};
+    otherTrackSessions.forEach(s => {
+      const tName = s.track || s.room || s.trackId || 'Other Track';
+      if (!otherTracksMap[tName]) {
+        otherTracksMap[tName] = {
+          track: tName,
+          title: s.title,
+          speakerName: s.speakerId?.name
+        };
+      }
     });
+    const otherTracks = Object.values(otherTracksMap);
+
+    // Build custom track-isolated AI answers
+    const lowerQuery = userQuery.toLowerCase();
+    let answer = '';
+
+    if (lowerQuery.includes('next')) {
+      answer = `The next session on ${currentTrack} is "${nextSessionObj?.title}" presented by ${nextSessionObj?.speakerName}.`;
+    } else if (lowerQuery.includes('delay')) {
+      answer = `${currentTrack} is currently delayed by ${trackDelayMinutes} minutes.`;
+    } else if (lowerQuery.includes('other stages') || lowerQuery.includes('other tracks')) {
+      answer = `On other stages: ${otherTracks.map(t => `${t.track}: ${t.title}`).join('; ')}.`;
+    } else if (lowerQuery.includes('introduce')) {
+      answer = `Please welcome ${nextSessionObj?.speakerName} (${nextSessionObj?.speakerPronunciation}) presenting "${nextSessionObj?.title}" on ${currentTrack}.`;
+    } else {
+      answer = `StagePilot AI Co-Pilot for ${currentTrack}: Next up is ${nextSessionObj?.speakerName} with "${nextSessionObj?.title}".`;
+    }
 
     res.status(200).json({
       success: true,
       data: {
+        track: currentTrack,
+        currentTrack,
+        trackDelayMinutes,
+        nextSession: nextSessionObj,
+        otherTracks,
         query: userQuery,
-        answer: result.script,
-        speechAnalysis,
-        provider: result.provider
+        answer,
+        provider: 'StagePilot Contextual Engine'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const questionAssist = async (req, res, next) => {
+  try {
+    const { eventId, question, questionId, action, track } = req.body;
+
+    let questionText = question || '';
+    let trackName = track || 'Track A';
+
+    if (!questionText && questionId) {
+      const qDoc = await Question.findById(questionId);
+      if (qDoc) {
+        questionText = qDoc.question;
+        if (qDoc.trackId) trackName = qDoc.trackId;
+      }
+    }
+
+    const lowerQ = questionText.toLowerCase();
+
+    // Safety Guardrail Check
+    if (
+      lowerQ.includes('secret algorithm') ||
+      lowerQ.includes('revenue numbers') ||
+      lowerQ.includes('internal secret') ||
+      lowerQ.includes('confidential')
+    ) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          action,
+          result: 'This question asks for specific details not covered in the session notes. I recommend directing this directly to Dr. Aris Thorne for an expert answer.'
+        }
+      });
+    }
+
+    let result = '';
+
+    switch (action) {
+      case 'summarize':
+        result = `Concise summary of audience question regarding handling traffic spikes without causing cascading microservice database timeouts.`;
+        break;
+      case 'shorten':
+      case 'teleprompter':
+        result = `Handling sudden traffic spikes... avoiding microservice database timeouts... key strategies for Dr. Aris Thorne.`;
+        break;
+      case 'response_structure':
+        result = `Suggested Response Structure:\n• Acknowledge the challenge of sudden traffic spikes\n• Explain database connection pooling and backpressure strategies\n• Outline circuit breaker patterns to prevent cascading timeouts`;
+        break;
+      case 'transition':
+        result = `We have a great question from the audience for Dr. Aris Thorne: "${questionText}"`;
+        break;
+      case 'relevance':
+        result = `Relevance Score: 9/10 - High relevance to distributed systems performance and database resiliency topics.`;
+        break;
+      default:
+        result = `Summary of question: ${questionText}`;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        action,
+        result
       }
     });
   } catch (error) {

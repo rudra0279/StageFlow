@@ -12,9 +12,10 @@ import { QUESTION_STATUS } from '../constants/eventStatus.js';
 export const createQuestion = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.body.eventId;
-    const { sessionId, trackId, track, question, text, authorName } = req.body;
+    const { sessionId, trackId, track, question, text, authorName, voterId: bodyVoterId } = req.body;
 
     const voterId =
+      bodyVoterId ||
       req.user?._id?.toString() ||
       req.headers['x-client-id'] ||
       req.ip ||
@@ -45,14 +46,16 @@ export const createQuestion = async (req, res, next) => {
 export const listQuestions = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.query.eventId;
-    const { sessionId, trackId, status, sort, page, limit } = req.query;
+    const { sessionId, trackId, track, status, sort, sortBy, page, limit } = req.query;
 
     const result = await getQuestions({
       eventId,
       sessionId,
-      trackId,
+      trackId: trackId || track,
+      track: track || trackId,
       status,
       sort,
+      sortBy,
       page,
       limit
     });
@@ -60,6 +63,7 @@ export const listQuestions = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: result.questions.length,
+      data: result.questions,
       ...result
     });
   } catch (error) {
@@ -190,15 +194,19 @@ export const answerQuestion = async (req, res, next) => {
 export const upvoteQuestionEndpoint = async (req, res, next) => {
   try {
     const voterId =
+      req.body?.voterId ||
       req.user?._id?.toString() ||
       req.headers['x-client-id'] ||
       req.ip ||
       req.socket?.remoteAddress ||
       'anonymous_voter';
 
+    const allowIdempotent = !!req.body?.voterId;
+
     const updated = await upvoteQuestion({
       questionId: req.params.id,
-      voterId
+      voterId,
+      allowIdempotent
     });
 
     res.status(200).json({

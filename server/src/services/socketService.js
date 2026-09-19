@@ -8,29 +8,35 @@ export const socketService = {
   emitToEvent: (eventId, eventName, payload, options = {}) => {
     try {
       const io = getIO();
-      const mainRoom = `event_${eventId}`;
+      const mainRooms = [`event_${eventId}`, `event:${eventId}`];
       const track = options.track || options.trackId;
 
       if (options.organizerOnly) {
-        io.to(`${mainRoom}:organizers`).emit(eventName, payload);
+        io.to(`event_${eventId}:organizers`).emit(eventName, payload);
+        io.to(`event:${eventId}:organizers`).emit(eventName, payload);
+        io.to(`event_${eventId}_organizers`).emit(eventName, payload);
       } else if (options.anchorOnly) {
-        io.to(`${mainRoom}:anchors`).emit(eventName, payload);
+        io.to(`event_${eventId}:anchors`).emit(eventName, payload);
+        io.to(`event:${eventId}:anchors`).emit(eventName, payload);
         io.to(`event_${eventId}_anchors`).emit(eventName, payload);
         if (track) {
-          io.to(`${mainRoom}:anchors:${track}`).emit(eventName, payload);
-          io.to(`${mainRoom}:track:${track}`).emit(eventName, payload);
+          io.to(`event_${eventId}:anchors:${track}`).emit(eventName, payload);
+          io.to(`event:${eventId}:anchors:${track}`).emit(eventName, payload);
+          io.to(`event_${eventId}:track:${track}`).emit(eventName, payload);
+          io.to(`event:${eventId}:track:${track}`).emit(eventName, payload);
         }
       } else {
-        io.to(mainRoom).emit(eventName, payload);
-        io.to(`${mainRoom}:organizers`).emit(eventName, payload);
-        io.to(`${mainRoom}:anchors`).emit(eventName, payload);
+        mainRooms.forEach(r => io.to(r).emit(eventName, payload));
+        io.to(`event_${eventId}:organizers`).emit(eventName, payload);
+        io.to(`event_${eventId}:anchors`).emit(eventName, payload);
         io.to(`event_${eventId}_anchors`).emit(eventName, payload);
         if (track) {
-          io.to(`${mainRoom}:anchors:${track}`).emit(eventName, payload);
-          io.to(`${mainRoom}:track:${track}`).emit(eventName, payload);
+          io.to(`event_${eventId}:anchors:${track}`).emit(eventName, payload);
+          io.to(`event_${eventId}:track:${track}`).emit(eventName, payload);
+          io.to(`event:${eventId}:track:${track}`).emit(eventName, payload);
         }
       }
-      logger.socket(eventName, mainRoom, { keys: Object.keys(payload || {}) });
+      logger.socket(eventName, `event_${eventId}`, { keys: Object.keys(payload || {}) });
     } catch (err) {
       logger.warn(`Could not emit socket event [${eventName}]: ${err.message}`);
     }
@@ -42,16 +48,52 @@ export const socketService = {
   emitToAnchors: (eventId, eventName, payload, track = null) => {
     try {
       const io = getIO();
-      const room = `event_${eventId}_anchors`;
-      io.to(room).emit(eventName, payload);
-      io.to(`event_${eventId}:anchors`).emit(eventName, payload);
+      const rooms = [
+        `event_${eventId}_anchors`,
+        `event:${eventId}:anchors`,
+        `event_${eventId}:anchors`,
+        `event_${eventId}_anchor`
+      ];
+      rooms.forEach(r => io.to(r).emit(eventName, payload));
       if (track) {
         io.to(`event_${eventId}:anchors:${track}`).emit(eventName, payload);
+        io.to(`event:${eventId}:anchors:${track}`).emit(eventName, payload);
         io.to(`event_${eventId}:track:${track}`).emit(eventName, payload);
+        io.to(`event:${eventId}:track:${track}`).emit(eventName, payload);
       }
-      logger.socket(eventName, room, payload);
+      logger.socket(eventName, `event_${eventId}_anchors`, payload);
     } catch (err) {
       logger.warn(`Could not emit to anchors [${eventName}]: ${err.message}`);
+    }
+  },
+
+  /**
+   * Broadcast an event specifically to organizers
+   */
+  emitToOrganizers: (eventId, eventName, payload) => {
+    try {
+      const io = getIO();
+      const rooms = [
+        `event_${eventId}_organizers`,
+        `event:${eventId}:organizers`,
+        `event_${eventId}_organizer`
+      ];
+      rooms.forEach(r => io.to(r).emit(eventName, payload));
+      logger.socket(eventName, `event_${eventId}_organizers`, payload);
+    } catch (err) {
+      logger.warn(`Could not emit to organizers [${eventName}]: ${err.message}`);
+    }
+  },
+
+  /**
+   * Broadcast to any arbitrary room name
+   */
+  emitToRoom: (roomName, eventName, payload) => {
+    try {
+      const io = getIO();
+      io.to(roomName).emit(eventName, payload);
+    } catch (err) {
+      logger.warn(`Could not emit to room [${roomName}] [${eventName}]: ${err.message}`);
     }
   }
 };

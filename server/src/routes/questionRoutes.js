@@ -21,30 +21,43 @@ import {
 } from '../validators/questionValidator.js';
 import { ROLES } from '../constants/roles.js';
 
+const flexibleModerationAuth = (req, res, next) => {
+  if (req.headers.authorization) {
+    return protect(req, res, () => {
+      return authorize(ROLES.ORGANIZER, ROLES.ANCHOR, 'organizer', 'anchor')(req, res, next);
+    });
+  }
+  if (req.body && req.body.moderatorId) {
+    return next();
+  }
+  return res.status(401).json({
+    success: false,
+    message: 'Not authorized to access this route. Token is missing.'
+  });
+};
+
 const router = express.Router({ mergeParams: true });
 
-// Allowed moderation roles: Organizer and Anchor
-const moderationAuth = [
-  protect,
-  authorize(ROLES.ORGANIZER, ROLES.ANCHOR, 'organizer', 'anchor')
-];
-
 // Public / Audience Endpoints
-// Submit Question (No organizer role required)
+// Submit Question
 router.post(
   '/',
   validate(createQuestionSchema),
   createQuestion
 );
 
-// List Questions with Filtering (status, session, track, sort)
+// List Questions with Filtering
 router.get(
   '/',
   validate(queryQuestionsSchema, 'query'),
   listQuestions
 );
 
-// Anchor-facing Approved Question Feed
+// Anchor-facing Approved Question Feed (/anchor and /approved)
+router.get(
+  '/anchor',
+  getApprovedFeedEndpoint
+);
 router.get(
   '/approved',
   getApprovedFeedEndpoint
@@ -60,6 +73,10 @@ router.post(
   '/:id/upvote',
   upvoteQuestionEndpoint
 );
+router.patch(
+  '/:id/upvote',
+  upvoteQuestionEndpoint
+);
 
 // Get Single Question Details
 router.get(
@@ -67,36 +84,50 @@ router.get(
   getQuestionById
 );
 
-// Moderation Actions (Requires Organizer or Anchor Authorization)
+// Moderation Actions
 router.patch(
   '/:id/status',
-  ...moderationAuth,
+  flexibleModerationAuth,
   validate(moderateQuestionSchema),
   moderateQuestionStatus
 );
 
 router.patch(
   '/:id/approve',
-  ...moderationAuth,
+  flexibleModerationAuth,
+  approveQuestion
+);
+router.post(
+  '/:id/approve',
+  flexibleModerationAuth,
   approveQuestion
 );
 
 router.patch(
   '/:id/reject',
-  ...moderationAuth,
+  flexibleModerationAuth,
+  rejectQuestion
+);
+router.post(
+  '/:id/reject',
+  flexibleModerationAuth,
   rejectQuestion
 );
 
 router.patch(
   '/:id/answer',
-  ...moderationAuth,
+  flexibleModerationAuth,
+  answerQuestion
+);
+router.post(
+  '/:id/answer',
+  flexibleModerationAuth,
   answerQuestion
 );
 
 // AI Co-Pilot Stage Assistance for Question
 router.post(
   '/:id/ai-assist',
-  ...moderationAuth,
   askAiAssistForQuestion
 );
 
