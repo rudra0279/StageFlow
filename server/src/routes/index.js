@@ -6,6 +6,7 @@ import speakerRoutes from './speakerRoutes.js';
 import aiRoutes from './aiRoutes.js';
 import announcementRoutes from './announcementRoutes.js';
 import agendaRoutes from './agendaRoutes.js';
+import questionRoutes from './questionRoutes.js';
 
 const router = express.Router();
 
@@ -27,5 +28,6 @@ router.use('/speakers', speakerRoutes);
 router.use('/ai', aiRoutes);
 router.use('/announcements', announcementRoutes);
 router.use('/agenda', agendaRoutes);
+router.use('/questions', questionRoutes);
 
 export default router;

@@ -12,6 +12,7 @@ const collections = {
   Speaker: [],
   Agenda: [],
   Announcement: [],
+  Question: [],
 };
 
 function matchesFilter(item, filter = {}) {
@@ -205,7 +206,33 @@ function createMemoryModel(modelName) {
       const idx = list.findIndex(item => item._id.toString() === id.toString());
       if (idx === -1) return null;
 
-      list[idx] = { ...list[idx], ...update, updatedAt: new Date().toISOString() };
+      let item = list[idx];
+      let updatedData = { ...item };
+
+      if (update.$inc) {
+        for (const k in update.$inc) {
+          updatedData[k] = (updatedData[k] || 0) + update.$inc[k];
+        }
+      }
+      if (update.$addToSet) {
+        for (const k in update.$addToSet) {
+          if (!Array.isArray(updatedData[k])) updatedData[k] = [];
+          if (!updatedData[k].includes(update.$addToSet[k])) {
+            updatedData[k].push(update.$addToSet[k]);
+          }
+        }
+      }
+      if (update.$set) {
+        Object.assign(updatedData, update.$set);
+      }
+      for (const k in update) {
+        if (!k.startsWith('$')) {
+          updatedData[k] = update[k];
+        }
+      }
+
+      updatedData.updatedAt = new Date().toISOString();
+      list[idx] = updatedData;
       return createDocInstance(modelName, cloneDoc(list[idx]));
     },
 
@@ -244,6 +271,7 @@ const MemoryEvent = createMemoryModel('Event');
 const MemorySpeaker = createMemoryModel('Speaker');
 const MemoryAgenda = createMemoryModel('Agenda');
 const MemoryAnnouncement = createMemoryModel('Announcement');
+const MemoryQuestion = createMemoryModel('Question');
 
 function clearAllMemoryCollections() {
   for (const key in collections) {
@@ -257,6 +285,7 @@ module.exports = {
   MemorySpeaker,
   MemoryAgenda,
   MemoryAnnouncement,
+  MemoryQuestion,
   clearAllMemoryCollections,
   collections,
 };

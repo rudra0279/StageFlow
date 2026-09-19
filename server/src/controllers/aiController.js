@@ -141,10 +141,11 @@ export const generateScript = async (req, res, next) => {
 
 export const copilotQuery = async (req, res, next) => {
   try {
-    const { eventId, sessionId, query, speechContext, speechTracking } = req.body;
+    const { eventId, sessionId, query, command, speechContext, speechTracking } = req.body;
+    const userQuery = query || command;
 
-    if (!query) {
-      return res.status(400).json({ success: false, message: 'Query is required' });
+    if (!userQuery) {
+      return res.status(400).json({ success: false, message: 'Query or command is required' });
     }
 
     const event = await Event.findById(eventId);
@@ -171,7 +172,7 @@ export const copilotQuery = async (req, res, next) => {
       event,
       session,
       speaker,
-      query,
+      userQuery,
       trackingData,
       nextSession,
       nextSession?.speakerId
@@ -197,7 +198,7 @@ export const copilotQuery = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: {
-        query,
+        query: userQuery,
         answer: result.script,
         speechAnalysis,
         provider: result.provider

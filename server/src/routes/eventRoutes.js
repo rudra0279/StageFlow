@@ -9,6 +9,7 @@ import {
   broadcastAnnouncement
 } from '../controllers/eventController.js';
 import sessionRoutes from './sessionRoutes.js';
+import questionRoutes from './questionRoutes.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/roleMiddleware.js';
 import { validate } from '../middleware/validateMiddleware.js';
@@ -18,8 +19,9 @@ import { ROLES } from '../constants/roles.js';
 
 const router = express.Router();
 
-// Forward session routes: /api/events/:eventId/sessions
+// Forward nested routes: /api/events/:eventId/sessions and /api/events/:eventId/questions
 router.use('/:eventId/sessions', sessionRoutes);
+router.use('/:eventId/questions', questionRoutes);
 
 router.route('/')
   .get(protect, getEvents)

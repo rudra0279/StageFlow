@@ -28,5 +28,12 @@ export const SOCKET_EVENTS = {
   REQUEST_AI_SCRIPT: 'request_ai_script',
 
   // Health Updates
-  HEALTH_STATUS_CHANGED: 'health_status_changed'
+  HEALTH_STATUS_CHANGED: 'health_status_changed',
+
+  // Stage 4: Live Audience Q&A
+  NEW_QUESTION: 'new_question',
+  QUESTION_APPROVED: 'question_approved',
+  QUESTION_REJECTED: 'question_rejected',
+  QUESTION_UPVOTED: 'question_upvoted',
+  QUESTION_ANSWERED: 'question_answered'
 };
