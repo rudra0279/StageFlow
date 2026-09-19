@@ -47,7 +47,7 @@ socket.emit('leaveEvent', {
 
 ---
 
-## 2. Server-Emitted Events
+## 2. Server-Emitted Real-Time Events
 
 All events are broadcast **exclusively** to the room `event:<eventId>`.
 
