@@ -169,17 +169,23 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   session.durationMinutes = (session.durationMinutes || 0) + delayMin;
   await session.save();
 
-  // 2. Adjust affected subsequent schedule items
-  const subsequentSessions = await Agenda.find({
+  // 2. Adjust affected subsequent schedule items for this specific track
+  const subsequentQuery = {
     eventId,
     _id: { $ne: session._id },
     orderIndex: { $gt: session.orderIndex },
     status: { $in: ['UPCOMING', 'DELAYED'] },
-  }).sort({ orderIndex: 1 });
+  };
+  if (session.trackId) {
+    subsequentQuery.trackId = session.trackId;
+  }
+
+  const subsequentSessions = await Agenda.find(subsequentQuery).sort({ orderIndex: 1 });
 
   for (const item of subsequentSessions) {
     item.startTime = new Date(new Date(item.startTime).getTime() + delayMs);
     item.endTime = new Date(new Date(item.endTime).getTime() + delayMs);
+    item.delayMinutes = (item.delayMinutes || 0) + delayMin;
     await item.save();
   }
 
