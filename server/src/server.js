@@ -57,12 +57,12 @@ const startServer = async () => {
 
   process.on('unhandledRejection', (err) => {
     logger.error('Unhandled Promise Rejection:', err);
-    server.close(() => process.exit(1));
+    httpServer.close(() => process.exit(1));
   });
 
   process.on('SIGTERM', () => {
     logger.info('SIGTERM received. Shutting down gracefully...');
-    server.close(() => process.exit(0));
+    httpServer.close(() => process.exit(0));
   });
 };
 

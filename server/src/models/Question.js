@@ -96,7 +96,6 @@ questionSchema.virtual('isAnswered').get(function () {
 questionSchema.virtual('upvoters').get(function () {
   return this.upvotedBy || [];
 });
-});
 
 // Pre-validate hook for aliases and uppercase normalization
 questionSchema.pre('validate', function (next) {
