@@ -7,7 +7,7 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const aiRoutes = require('./routes/aiRoutes');
-const questionRoutes = require('./routes/questionRoutes');
+const questionRoutes = require('./routes/questionRoutesAuth'); // Auth-protected flat mount
 
 const app = express();
 

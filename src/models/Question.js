@@ -14,7 +14,12 @@ const QuestionSchema = new mongoose.Schema(
       ref: 'Agenda',
       default: null,
     },
+    // trackId kept for backward compatibility; track is the canonical field
     trackId: {
+      type: String,
+      default: null,
+    },
+    track: {
       type: String,
       default: null,
     },
@@ -43,12 +48,25 @@ const QuestionSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // upvoters is an alias field stored alongside upvotedBy
+    upvoters: {
+      type: [String],
+      default: [],
+    },
     moderatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       default: null,
     },
     moderatedAt: {
+      type: Date,
+      default: null,
+    },
+    isAnswered: {
+      type: Boolean,
+      default: false,
+    },
+    answeredAt: {
       type: Date,
       default: null,
     },
@@ -82,3 +100,4 @@ const QuestionProxy = new Proxy(MongooseQuestion, {
 });
 
 module.exports = QuestionProxy;
+

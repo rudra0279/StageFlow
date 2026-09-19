@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateScript, copilotQuery, teleprompterAssist } from '../controllers/aiController.js';
+import { generateScript, copilotQuery, teleprompterAssist, handleQuestionAssist } from '../controllers/aiController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -22,6 +22,7 @@ router.get('/', (req, res) => {
       'POST /api/ai/query',
       'POST /api/ai/copilot-query',
       'POST /api/ai/assistant',
+      'POST /api/ai/question-assist',
       'POST /api/ai/teleprompter-assist',
       'POST /api/ai/introduction',
       'POST /api/ai/opening',
@@ -33,6 +34,9 @@ router.get('/', (req, res) => {
     ]
   });
 });
+
+// Stage 4: AI Question Assist
+router.post('/question-assist', handleQuestionAssist);
 
 // Primary script generation endpoints
 router.post('/generate-script', protect, generateScript);

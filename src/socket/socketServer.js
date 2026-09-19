@@ -19,17 +19,39 @@ function initSocket(server) {
     logger.socket(`Client connected: socketId=${socket.id}`);
 
     // Join event room
-    socket.on(CLIENT_EVENTS.JOIN_EVENT, ({ eventId, role }) => {
+    socket.on(CLIENT_EVENTS.JOIN_EVENT, ({ eventId, role, track }) => {
       if (!eventId) {
         logger.socket(`joinEvent failed: missing eventId from socketId=${socket.id}`);
         return;
       }
       const room = getEventRoom(eventId);
       socket.join(room);
-      logger.socket(`Socket ${socket.id} (role: ${role || 'guest'}) joined room: ${room}`);
+
+      // Also join role-specific and track-specific rooms
+      const normalizedRole = (role || '').toUpperCase();
+      if (normalizedRole === 'ORGANIZER') {
+        socket.join(`${room}:organizers`);
+      } else if (normalizedRole === 'ANCHOR') {
+        socket.join(`${room}:anchors`);
+        if (track) {
+          socket.join(`${room}:track:${track}`);
+        }
+      } else if (normalizedRole === 'AUDIENCE') {
+        socket.join(`${room}:audience`);
+      }
+
+      logger.socket(`Socket ${socket.id} (role: ${role || 'guest'}, track: ${track || 'none'}) joined room: ${room}`);
 
       // Acknowledge joining
-      socket.emit('joinedEvent', { eventId, room, success: true });
+      socket.emit('joinedEvent', { eventId, room, success: true, track });
+    });
+
+    // Join specific track room
+    socket.on('joinTrack', ({ eventId, track }) => {
+      if (!eventId || !track) return;
+      const room = getEventRoom(eventId);
+      socket.join(`${room}:track:${track}`);
+      socket.emit('joinedTrack', { eventId, track, success: true });
     });
 
     // Leave event room

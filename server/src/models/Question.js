@@ -78,6 +78,16 @@ questionSchema.virtual('text').get(function () {
   return this.question;
 });
 
+// Virtual alias 'track' -> 'trackId'
+questionSchema.virtual('track').get(function () {
+  return this.trackId;
+});
+
+// Virtual alias 'isAnswered'
+questionSchema.virtual('isAnswered').get(function () {
+  return this.status === QUESTION_STATUS.ANSWERED;
+});
+
 // Pre-validate hook for aliases and uppercase normalization
 questionSchema.pre('validate', function (next) {
   if (this.status) {

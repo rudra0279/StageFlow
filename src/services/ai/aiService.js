@@ -127,8 +127,10 @@ function generateContextualFallback(type, context) {
       return `Good morning, ladies and gentlemen, innovators and guests! Welcome to ${event} here at ${context.venue || 'the venue'}. Today is all about creativity, collaboration, and pushing boundaries. Get ready for an electrifying journey!`;
     case 'introduction':
       return `It is an absolute honor to introduce our distinguished guest, ${speaker}${pronunciation}${context.currentSpeaker && context.currentSpeaker.designation ? `, ${context.currentSpeaker.designation}` : ''}. Today, they will share profound insights on "${current}". Please join me in giving a warm round of applause to welcome ${speaker} to the stage!`;
-    case 'transition':
-      return `A tremendous thank you to ${speaker} for that inspiring session on "${current}". As we transition, prepare yourselves for "${next}" ${nextSpeaker}${nextPronunciation}. Take a breath, reset, and let's keep the momentum going!`;
+    case 'transition': {
+      const trackNote = context.track ? ` on ${context.track}` : '';
+      return `A tremendous thank you to ${speaker} for that inspiring session on "${current}". As we transition${trackNote}, prepare yourselves for "${next}" ${nextSpeaker}${nextPronunciation}. Take a breath, reset, and let's keep the momentum going!`;
+    }
     case 'announcement':
       if (context.delayMinutes || (context.scheduleChanges && context.scheduleChanges.length > 0)) {
         return `Attention please! We have a quick update: session "${current}" is extended by approximately ${delay} minutes. Please enjoy this brief pause to grab a beverage and network. We will resume promptly!`;
@@ -144,6 +146,16 @@ function generateContextualFallback(type, context) {
       return `${analysis.paceSuggestion} Next line cue: "${analysis.nextLine}"`;
     case 'assistant': {
       const q = (context.userQuery || '').toLowerCase();
+      if (q.includes('other stages') || q.includes('other tracks')) {
+        const otherStr = (context.otherTracks && context.otherTracks.length > 0)
+          ? context.otherTracks.map(ot => `${ot.track}: ${ot.currentSession ? ot.currentSession.title : 'Active'}`).join(', ')
+          : 'Track B: Sessions in progress';
+        return `Here is what is happening on the other stages: ${otherStr}.`;
+      }
+      if (q.includes('delay')) {
+        const delayVal = context.trackDelayMinutes !== undefined ? context.trackDelayMinutes : delay;
+        return `Ladies and gentlemen, a brief schedule update: this track is delayed by ${delayVal} minutes. We appreciate your patience!`;
+      }
       if (q.includes('pace') || q.includes('speed')) {
         return analysis.paceSuggestion;
       }
@@ -155,17 +167,16 @@ function generateContextualFallback(type, context) {
       if (q.includes('next line') || q.includes('next sentence')) {
         return `Next line: "${analysis.nextLine}"`;
       }
-      if (q.includes('next')) {
-        return `Next up is "${next}" ${nextSpeaker}${nextPronunciation} in room ${context.nextSession ? context.nextSession.room || 'Main Stage' : 'Main Stage'}. Event status is currently ${context.eventHealth}.`;
-      }
       if (q.includes('speaker') || q.includes('introduce')) {
         return `Coming up next: ${nextSpeaker || speaker}${nextPronunciation || pronunciation}. An accomplished leader ready to enlighten us on "${next}". Let's give them a resounding welcome!`;
       }
-      if (q.includes('delay')) {
-        return `Ladies and gentlemen, a brief schedule update: we have extended our current session by ${delay} minutes to allow for an in-depth Q&A. We appreciate your patience!`;
-      }
       if (q.includes('transition')) {
-        return `Thank you everyone for engaging with "${current}". We are now transitioning to our next session: "${next}". Please take your seats!`;
+        const trackNote = context.track ? ` on ${context.track}` : '';
+        return `Thank you everyone for engaging with "${current}". We are now transitioning${trackNote} to our next session: "${next}". Please take your seats!`;
+      }
+      if (q.includes('next')) {
+        const trackNote = context.track ? ` on ${context.track}` : '';
+        return `Next up${trackNote} is "${next}" ${nextSpeaker}${nextPronunciation} in room ${context.nextSession ? context.nextSession.room || 'Main Stage' : 'Main Stage'}. Event status is currently ${context.eventHealth}.`;
       }
       if (q.includes('closing')) {
         return `Thank you all for being part of ${event}! Safe travels and congratulations to everyone!`;

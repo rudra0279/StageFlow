@@ -15,6 +15,7 @@ router.post('/filler', aiController.handleFiller);
 router.post('/emergency', aiController.handleEmergency);
 router.post('/teleprompter-assist', aiController.handleTeleprompterAssist);
 router.post('/assistant', aiController.handleAssistant);
+router.post('/question-assist', aiController.handleQuestionAssist);
 
 module.exports = router;
 

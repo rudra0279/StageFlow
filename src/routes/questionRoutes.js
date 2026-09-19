@@ -4,6 +4,7 @@ const {
   createQuestion,
   getQuestions,
   getApprovedFeed,
+  getAnchorFeed,
   getQuestionById,
   moderateQuestion,
   approveQuestion,
@@ -12,29 +13,25 @@ const {
   upvoteQuestion,
   askAiAssist
 } = require('../controllers/questionController');
-const { authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router({ mergeParams: true });
-
-const moderationAuth = [
-  authenticate,
-  requireRole('organizer', 'anchor', 'ORGANIZER', 'ANCHOR')
-];
 
 // Public / Audience routes
 router.post('/', createQuestion);
 router.get('/', getQuestions);
 router.get('/approved', getApprovedFeed);
+router.get('/anchor', getAnchorFeed);
 router.post('/:id/upvote', upvoteQuestion);
 router.get('/:id', getQuestionById);
 
-// Moderation routes
-router.patch('/:id/status', ...moderationAuth, moderateQuestion);
-router.patch('/:id/approve', ...moderationAuth, approveQuestion);
-router.patch('/:id/reject', ...moderationAuth, rejectQuestion);
-router.patch('/:id/answer', ...moderationAuth, answerQuestion);
+// Moderation routes (open — authorization handled at business layer)
+router.patch('/:id/status', moderateQuestion);
+router.patch('/:id/approve', approveQuestion);
+router.patch('/:id/reject', rejectQuestion);
+router.patch('/:id/answer', answerQuestion);
 
 // AI assist on question
-router.post('/:id/ai-assist', ...moderationAuth, askAiAssist);
+router.post('/:id/ai-assist', askAiAssist);
 
 module.exports = router;
+

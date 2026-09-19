@@ -59,6 +59,14 @@ const AgendaSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    track: {
+      type: String,
+      default: null,
+    },
+    trackId: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

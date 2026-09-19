@@ -50,6 +50,11 @@ router.get(
   getApprovedFeedEndpoint
 );
 
+router.get(
+  '/anchor',
+  getApprovedFeedEndpoint
+);
+
 // Upvote Question (Audience-accessible with anti-abuse)
 router.post(
   '/:id/upvote',

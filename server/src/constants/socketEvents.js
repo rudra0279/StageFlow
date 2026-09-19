@@ -32,8 +32,9 @@ export const SOCKET_EVENTS = {
 
   // Stage 4: Live Audience Q&A
   NEW_QUESTION: 'new_question',
-  QUESTION_APPROVED: 'question_approved',
-  QUESTION_REJECTED: 'question_rejected',
-  QUESTION_UPVOTED: 'question_upvoted',
-  QUESTION_ANSWERED: 'question_answered'
+  QUESTION_SUBMITTED: 'questionSubmitted',
+  QUESTION_APPROVED: 'questionApproved',
+  QUESTION_REJECTED: 'questionRejected',
+  QUESTION_UPVOTED: 'questionUpvoted',
+  QUESTION_ANSWERED: 'questionAnswered'
 };

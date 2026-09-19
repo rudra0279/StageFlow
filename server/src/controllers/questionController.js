@@ -12,19 +12,20 @@ import { QUESTION_STATUS } from '../constants/eventStatus.js';
 export const createQuestion = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.body.eventId;
-    const { sessionId, trackId, question, text, authorName } = req.body;
+    const { sessionId, trackId, track, question, text, authorName } = req.body;
 
     const voterId =
       req.user?._id?.toString() ||
       req.headers['x-client-id'] ||
       req.ip ||
-      req.socket.remoteAddress ||
+      req.socket?.remoteAddress ||
       'anonymous_client';
 
     const newQuestion = await submitQuestion({
       eventId,
       sessionId,
-      trackId,
+      trackId: trackId || track,
+      track: track || trackId,
       question,
       text,
       authorName: authorName || req.user?.name,
@@ -69,12 +70,13 @@ export const listQuestions = async (req, res, next) => {
 export const getApprovedFeedEndpoint = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.query.eventId;
-    const { sessionId, trackId, limit } = req.query;
+    const { sessionId, trackId, track, limit } = req.query;
 
     const result = await getApprovedFeed({
       eventId,
       sessionId,
-      trackId,
+      trackId: trackId || track,
+      track: track || trackId,
       limit
     });
 
@@ -191,7 +193,7 @@ export const upvoteQuestionEndpoint = async (req, res, next) => {
       req.user?._id?.toString() ||
       req.headers['x-client-id'] ||
       req.ip ||
-      req.socket.remoteAddress ||
+      req.socket?.remoteAddress ||
       'anonymous_voter';
 
     const updated = await upvoteQuestion({
@@ -205,6 +207,13 @@ export const upvoteQuestionEndpoint = async (req, res, next) => {
       data: updated
     });
   } catch (error) {
+    if (error.statusCode === 400 && error.message && error.message.toLowerCase().includes('already upvoted')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        data: error.question
+      });
+    }
     next(error);
   }
 };

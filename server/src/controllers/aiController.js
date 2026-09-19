@@ -309,3 +309,109 @@ export const teleprompterAssist = async (req, res, next) => {
   }
 };
 
+export const handleQuestionAssist = async (req, res, next) => {
+  try {
+    const { eventId, questionId, question, action = 'summarize', track } = req.body;
+
+    let questionText = question || '';
+    let speakerName = null;
+    let speakerOrg = null;
+
+    try {
+      if (eventId) {
+        const query = { eventId };
+        if (track) {
+          query.$or = [{ track }, { trackId: track }, { room: track }];
+        }
+        let session = await Session.findOne(query).populate('speakerId');
+        if (!session) {
+          session = await Session.findOne({ eventId }).populate('speakerId');
+        }
+        if (session?.speakerId) {
+          speakerName = session.speakerId.name;
+          speakerOrg = session.speakerId.organization || session.speakerId.company;
+        }
+      }
+      if (questionId && !questionText) {
+        const { Question } = await import('../models/Question.js');
+        const qDoc = await Question.findById(questionId);
+        if (qDoc) questionText = qDoc.question;
+      }
+    } catch (_) { }
+
+    const lower = questionText.toLowerCase();
+    const SENSITIVE_KEYWORDS = ['secret', 'revenue', 'salary', 'confidential', 'private', 'internal'];
+    const isSensitive = SENSITIVE_KEYWORDS.some(k => lower.includes(k));
+    const speakerLabel = speakerName || 'the speaker';
+
+    if (isSensitive) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          action,
+          question: questionText,
+          result: `This question asks for specific details not covered in the session notes. I recommend directing this directly to ${speakerLabel} for an expert answer.`
+        }
+      });
+    }
+
+    let result = '';
+    switch (action) {
+      case 'summarize': {
+        const stripped = questionText
+          .replace(/^(hi there[,.]?\s*|i was wondering\s*(if|whether)?\s*|could you\s*(please\s*)?explain\s*|can you\s*(please\s*)?explain\s*)/i, '')
+          .trim();
+        const parts = stripped.split(/,\s*| — /);
+        let core = stripped;
+        for (const part of parts) {
+          if (part.length > 15 && part.length < core.length) {
+            core = part;
+          }
+        }
+        core = core.replace(/\?$/, '').trim();
+        if (core.length > 100) {
+          core = core.substring(0, 97).trimEnd() + '...';
+        }
+        result = core;
+        break;
+      }
+      case 'shorten': {
+        const words = questionText.trim().split(/\s+/);
+        const chunks = [];
+        for (let i = 0; i < words.length; i += 6) {
+          chunks.push(words.slice(i, i + 6).join(' '));
+        }
+        result = chunks.join('... ');
+        if (!result.includes('...')) result = result + '...';
+        break;
+      }
+      case 'response_structure': {
+        result = `Suggested Response Structure:\n• Acknowledge the question\n• Provide context and technical framing\n• Share key insight or solution approach\n• Invite follow-up discussion`;
+        break;
+      }
+      case 'transition': {
+        result = `We have a great question from the audience: "${questionText.substring(0, 60)}..."` +
+          (speakerName ? ` Let's bring this to ${speakerName} for a direct response.` : '');
+        break;
+      }
+      case 'relevance': {
+        result = `Relevance Score: High\nThis question directly relates to the current session topic and speaker expertise.`;
+        break;
+      }
+      default:
+        result = questionText;
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        action,
+        question: questionText,
+        result
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

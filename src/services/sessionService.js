@@ -10,33 +10,63 @@ function calculateHealth(delayTotalMinutes) {
   return 'RUNNING_LATE';
 }
 
-async function getEventState(eventId) {
+/**
+ * Get the current state of an event, optionally filtered to a specific track.
+ * @param {string} eventId
+ * @param {string|null} track - optional track filter
+ */
+async function getEventState(eventId, track) {
   const event = await Event.findById(eventId);
   if (!event) throw new Error('Event not found');
 
-  const agendaList = await Agenda.find({ eventId })
-    .populate('speakerId')
-    .sort({ orderIndex: 1, startTime: 1 });
+  let agendaQuery = Agenda.find({ eventId }).populate('speakerId').sort({ orderIndex: 1, startTime: 1 });
+  let agendaList = await agendaQuery;
 
-  const currentSession = agendaList.find(item => item.status === 'LIVE') ||
-    (event.currentSessionId ? agendaList.find(item => item._id.toString() === event.currentSessionId.toString()) : null) ||
+  // Track-filtered agenda view
+  let trackAgenda = agendaList;
+  if (track) {
+    trackAgenda = agendaList.filter(item => (item.track || item.trackId || null) === track);
+  }
+
+  const currentSession = trackAgenda.find(item => item.status === 'LIVE') ||
+    (!track && event.currentSessionId
+      ? agendaList.find(item => item._id.toString() === event.currentSessionId.toString())
+      : null) ||
     null;
 
   let nextSession = null;
   if (currentSession) {
-    nextSession = agendaList.find(
+    nextSession = trackAgenda.find(
       item => item.status === 'UPCOMING' && item.orderIndex > currentSession.orderIndex
-    ) || agendaList.find(item => item.status === 'UPCOMING' && item._id.toString() !== currentSession._id.toString()) || null;
+    ) || trackAgenda.find(item => item.status === 'UPCOMING' && item._id.toString() !== currentSession._id.toString()) || null;
   } else {
-    nextSession = agendaList.find(item => item.status === 'UPCOMING') || null;
+    nextSession = trackAgenda.find(item => item.status === 'UPCOMING') || null;
+  }
+
+  // Track-specific delay
+  let trackDelayMinutes = 0;
+  if (track && currentSession) {
+    trackDelayMinutes = currentSession.delayMinutes || 0;
   }
 
   const eventHealth = calculateHealth(event.delayTotalMinutes);
   if (event.eventHealth !== eventHealth || String(event.currentSessionId) !== String(currentSession ? currentSession._id : null)) {
     event.eventHealth = eventHealth;
-    event.currentSessionId = currentSession ? currentSession._id : null;
+    if (!track) {
+      event.currentSessionId = currentSession ? currentSession._id : null;
+    }
     await event.save();
   }
+
+  // Other tracks summary
+  const otherTracks = track
+    ? [...new Set(agendaList.map(item => item.track || item.trackId).filter(t => t && t !== track))]
+        .map(otherTrack => {
+          const otherCurrent = agendaList.find(item => (item.track || item.trackId) === otherTrack && item.status === 'LIVE');
+          const otherNext = agendaList.find(item => (item.track || item.trackId) === otherTrack && item.status === 'UPCOMING');
+          return { track: otherTrack, currentSession: otherCurrent || null, nextSession: otherNext || null };
+        })
+    : [];
 
   return {
     event,
@@ -44,6 +74,9 @@ async function getEventState(eventId) {
     nextSession,
     eventHealth,
     agendaList,
+    currentTrack: track || null,
+    trackDelayMinutes,
+    otherTracks,
   };
 }
 
@@ -51,15 +84,28 @@ async function startSession(eventId, agendaId) {
   const event = await Event.findById(eventId);
   if (!event) throw new Error('Event not found');
 
-  // Complete any currently LIVE session
-  await Agenda.updateMany(
-    { eventId, status: 'LIVE', _id: { $ne: agendaId } },
-    { $set: { status: 'COMPLETED' } }
-  );
+  const targetSession = await Agenda.findById(agendaId);
+  if (!targetSession) throw new Error('Agenda session not found');
+
+  const sessionTrack = targetSession.track || targetSession.trackId || null;
+
+  // Complete any currently LIVE session on the SAME track only (multi-track isolation)
+  const liveOnSameTrack = await Agenda.find({
+    eventId,
+    status: 'LIVE',
+    _id: { $ne: agendaId }
+  });
+
+  for (const liveSession of liveOnSameTrack) {
+    const liveTrack = liveSession.track || liveSession.trackId || null;
+    // Only complete if same track (or both trackless — single-track event)
+    if (liveTrack === sessionTrack) {
+      liveSession.status = 'COMPLETED';
+      await liveSession.save();
+    }
+  }
 
   const session = await Agenda.findById(agendaId).populate('speakerId');
-  if (!session) throw new Error('Agenda session not found');
-
   session.status = 'LIVE';
   await session.save();
 
@@ -67,7 +113,7 @@ async function startSession(eventId, agendaId) {
   event.currentSessionId = session._id;
   await event.save();
 
-  const state = await getEventState(eventId);
+  const state = await getEventState(eventId, sessionTrack);
   logger.session(`Session started: "${session.title}" in event: ${event.name}`);
 
   const eventStatePayload = {
@@ -81,7 +127,7 @@ async function startSession(eventId, agendaId) {
   socketEmitter.emitSessionStarted(eventId, session, eventStatePayload);
   socketEmitter.emitEventStateChanged(eventId, eventStatePayload);
 
-  return { session, eventState: eventStatePayload };
+  return { session, eventState: eventStatePayload, track: sessionTrack };
 }
 
 async function completeSession(eventId, agendaId) {
@@ -90,6 +136,8 @@ async function completeSession(eventId, agendaId) {
 
   const session = await Agenda.findById(agendaId).populate('speakerId');
   if (!session) throw new Error('Agenda session not found');
+
+  const sessionTrack = session.track || session.trackId || null;
 
   session.status = 'COMPLETED';
   await session.save();
@@ -114,7 +162,7 @@ async function completeSession(eventId, agendaId) {
   socketEmitter.emitSessionCompleted(eventId, session, eventStatePayload);
   socketEmitter.emitEventStateChanged(eventId, eventStatePayload);
 
-  return { session, eventState: eventStatePayload };
+  return { session, eventState: eventStatePayload, track: sessionTrack };
 }
 
 async function skipSession(eventId, agendaId) {
@@ -123,6 +171,8 @@ async function skipSession(eventId, agendaId) {
 
   const session = await Agenda.findById(agendaId).populate('speakerId');
   if (!session) throw new Error('Agenda session not found');
+
+  const sessionTrack = session.track || session.trackId || null;
 
   session.status = 'SKIPPED';
   await session.save();
@@ -146,7 +196,7 @@ async function skipSession(eventId, agendaId) {
   socketEmitter.emitSessionSkipped(eventId, session, eventStatePayload);
   socketEmitter.emitEventStateChanged(eventId, eventStatePayload);
 
-  return { session, eventState: eventStatePayload };
+  return { session, eventState: eventStatePayload, track: sessionTrack };
 }
 
 async function delaySession(eventId, agendaId, delayMinutes) {
@@ -161,6 +211,7 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   const session = await Agenda.findById(agendaId).populate('speakerId');
   if (!session) throw new Error('Agenda session not found');
 
+  const sessionTrack = session.track || session.trackId || null;
   const delayMs = delayMin * 60 * 1000;
 
   // 1. Extend current session endTime and delayMinutes
@@ -170,17 +221,18 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   await session.save();
 
   // 2. Adjust affected subsequent schedule items for this specific track
-  const subsequentQuery = {
+  const allSubsequent = await Agenda.find({
     eventId,
     _id: { $ne: session._id },
     orderIndex: { $gt: session.orderIndex },
     status: { $in: ['UPCOMING', 'DELAYED'] },
-  };
-  if (session.trackId) {
-    subsequentQuery.trackId = session.trackId;
-  }
+  }).sort({ orderIndex: 1 });
 
-  const subsequentSessions = await Agenda.find(subsequentQuery).sort({ orderIndex: 1 });
+  // Filter to same track only (track isolation)
+  const subsequentSessions = allSubsequent.filter(item => {
+    const itemTrack = item.track || item.trackId || null;
+    return itemTrack === sessionTrack;
+  });
 
   for (const item of subsequentSessions) {
     item.startTime = new Date(new Date(item.startTime).getTime() + delayMs);
@@ -199,11 +251,17 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   );
 
   // 4. Recalculate event state
-  const state = await getEventState(eventId);
+  const state = await getEventState(eventId, sessionTrack);
+
+  // Track-specific cumulative delay
+  const trackDelayMinutes = subsequentSessions.reduce((sum, s) => sum + (s.delayMinutes || 0), session.delayMinutes || 0) / (subsequentSessions.length + 1);
 
   const delayPayload = {
     agendaId: session._id,
     delayMinutes: delayMin,
+    trackDelayMinutes: session.delayMinutes,
+    track: sessionTrack,
+    affectedSessions: [session, ...subsequentSessions],
     currentSession: state.currentSession,
     nextSession: state.nextSession,
     eventHealth: state.eventHealth,
@@ -227,10 +285,13 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   return {
     session,
     delayMinutes: delayMin,
+    trackDelayMinutes: session.delayMinutes,
     eventHealth: state.eventHealth,
     currentSession: state.currentSession,
     nextSession: state.nextSession,
     agenda: state.agendaList,
+    track: sessionTrack,
+    affectedSessions: [session, ...subsequentSessions],
   };
 }
 

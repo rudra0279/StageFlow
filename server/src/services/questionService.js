@@ -12,6 +12,7 @@ export const submitQuestion = async ({
   eventId,
   sessionId = null,
   trackId = null,
+  track = null,
   question,
   text,
   authorName = 'Anonymous',
@@ -57,10 +58,23 @@ export const submitQuestion = async ({
     }
   }
 
+  if (authorName && typeof authorName === 'string' && authorName.trim().length > 100) {
+    const err = new Error('Author name cannot exceed 100 characters');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const effectiveTrack = (track || trackId) ? String(track || trackId).trim() : null;
+  if (effectiveTrack && effectiveTrack.length > 100) {
+    const err = new Error('Track identifier cannot exceed 100 characters');
+    err.statusCode = 400;
+    throw err;
+  }
+
   const newQuestion = await Question.create({
     eventId,
     sessionId: sessionId || null,
-    trackId: trackId ? String(trackId).trim() : null,
+    trackId: effectiveTrack,
     question: content,
     authorName: (authorName || '').trim() || 'Anonymous',
     status: QUESTION_STATUS.PENDING,
@@ -68,13 +82,18 @@ export const submitQuestion = async ({
     upvotedBy: voterId ? [voterId] : []
   });
 
-  // Real-time broadcast to event room and anchor sub-room
-  socketService.emitToEvent(eventId, SOCKET_EVENTS.NEW_QUESTION, {
+  // Real-time broadcast to organizers ONLY
+  const payload = {
     question: newQuestion,
+    questionId: newQuestion._id,
     eventId,
     sessionId: newQuestion.sessionId,
-    trackId: newQuestion.trackId
-  });
+    trackId: newQuestion.trackId,
+    track: newQuestion.trackId,
+    status: 'PENDING'
+  };
+  socketService.emitToEvent(eventId, 'questionSubmitted', payload, { organizerOnly: true });
+  socketService.emitToEvent(eventId, 'new_question', payload, { organizerOnly: true });
 
   return newQuestion;
 };
@@ -83,12 +102,14 @@ export const getQuestions = async ({
   eventId,
   sessionId = null,
   trackId = null,
+  track = null,
   status = null,
   sort = 'upvotes',
   limit = 50,
   page = 1
 }) => {
   const query = {};
+  const activeTrack = trackId || track;
 
   if (eventId) {
     if (!mongoose.isValidObjectId(eventId)) {
@@ -109,11 +130,11 @@ export const getQuestions = async ({
   }
 
   // Strict Track Scoping
-  if (trackId !== null && trackId !== undefined && trackId !== '') {
-    if (trackId === 'none' || trackId === 'null') {
+  if (activeTrack !== null && activeTrack !== undefined && activeTrack !== '') {
+    if (activeTrack === 'none' || activeTrack === 'null') {
       query.$or = [{ trackId: null }, { trackId: '' }];
     } else {
-      query.trackId = String(trackId).trim();
+      query.trackId = String(activeTrack).trim();
     }
   }
 
@@ -158,12 +179,14 @@ export const getApprovedFeed = async ({
   eventId,
   sessionId = null,
   trackId = null,
+  track = null,
   limit = 50
 }) => {
   return getQuestions({
     eventId,
     sessionId,
-    trackId,
+    trackId: trackId || track,
+    track: track || trackId,
     status: QUESTION_STATUS.APPROVED,
     sort: 'upvotes',
     limit,
@@ -234,25 +257,40 @@ export const moderateQuestion = async ({
 
   // Real-time dispatch according to moderation state
   if (normalizedStatus === QUESTION_STATUS.APPROVED) {
-    socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_APPROVED, {
+    const payload = {
       question,
       questionId: question._id,
       eventId: question.eventId,
       sessionId: question.sessionId,
+      trackId: question.trackId,
+      track: question.trackId,
+      status: QUESTION_STATUS.APPROVED
+    };
+    socketService.emitToEvent(question.eventId, 'questionApproved', payload, {
+      track: question.trackId,
+      trackId: question.trackId
+    });
+    socketService.emitToEvent(question.eventId, 'question_approved', payload, {
+      track: question.trackId,
       trackId: question.trackId
     });
   } else if (normalizedStatus === QUESTION_STATUS.REJECTED) {
-    socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_REJECTED, {
+    const payload = {
       questionId: question._id,
       status: QUESTION_STATUS.REJECTED,
       eventId: question.eventId
-    });
+    };
+    socketService.emitToEvent(question.eventId, 'questionRejected', payload, { organizerOnly: true });
+    socketService.emitToEvent(question.eventId, 'question_rejected', payload, { organizerOnly: true });
   } else if (normalizedStatus === QUESTION_STATUS.ANSWERED) {
-    socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_ANSWERED, {
+    const payload = {
       questionId: question._id,
       status: QUESTION_STATUS.ANSWERED,
-      eventId: question.eventId
-    });
+      eventId: question.eventId,
+      isAnswered: true
+    };
+    socketService.emitToEvent(question.eventId, 'questionAnswered', payload);
+    socketService.emitToEvent(question.eventId, 'question_answered', payload);
   }
 
   return question;
@@ -289,6 +327,7 @@ export const upvoteQuestion = async ({ questionId, voterId }) => {
   if (question.upvotedBy && question.upvotedBy.includes(identifier)) {
     const err = new Error('You have already upvoted this question');
     err.statusCode = 400;
+    err.question = question;
     throw err;
   }
 
@@ -302,11 +341,20 @@ export const upvoteQuestion = async ({ questionId, voterId }) => {
   );
 
   // Broadcast upvote update in real time to all in room
-  socketService.emitToEvent(question.eventId, SOCKET_EVENTS.QUESTION_UPVOTED, {
+  const payload = {
     questionId: updated._id,
     upvotes: updated.upvotes,
     eventId: updated.eventId,
     sessionId: updated.sessionId,
+    trackId: updated.trackId,
+    track: updated.trackId
+  };
+  socketService.emitToEvent(question.eventId, 'questionUpvoted', payload, {
+    track: updated.trackId,
+    trackId: updated.trackId
+  });
+  socketService.emitToEvent(question.eventId, 'question_upvoted', payload, {
+    track: updated.trackId,
     trackId: updated.trackId
   });
 

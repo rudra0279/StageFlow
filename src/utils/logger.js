@@ -9,19 +9,35 @@ const TAGS = {
   SYSTEM: '[SYSTEM]'
 };
 
+function redactSensitive(obj, depth = 0) {
+  if (!obj || depth > 5) return obj;
+  if (typeof obj !== 'object') return obj;
+
+  const sensitivePattern = /(password|token|apiKey|authorization|secret|credential|cookie|jwt)/i;
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => redactSensitive(item, depth + 1));
+  }
+
+  const sanitized = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (sensitivePattern.test(key)) {
+      sanitized[key] = '***REDACTED***';
+    } else if (typeof val === 'object' && val !== null) {
+      sanitized[key] = redactSensitive(val, depth + 1);
+    } else {
+      sanitized[key] = val;
+    }
+  }
+  return sanitized;
+}
+
 function formatMessage(tag, message, meta) {
   const timestamp = new Date().toISOString();
   let metaStr = '';
   if (meta) {
     try {
-      // Sanitize any potential sensitive fields
-      const sanitized = JSON.parse(JSON.stringify(meta));
-      const sensitiveKeys = ['password', 'token', 'apiKey', 'authorization', 'secret'];
-      for (const key of Object.keys(sanitized)) {
-        if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
-          sanitized[key] = '***REDACTED***';
-        }
-      }
+      const sanitized = redactSensitive(JSON.parse(JSON.stringify(meta)));
       metaStr = ' ' + JSON.stringify(sanitized);
     } catch {
       // Ignore serialization issues
