@@ -63,11 +63,7 @@ async function verifyInviteCode(req, res, next) {
 
 async function register(req, res, next) {
   try {
-<<<<<<< Updated upstream
-    const { name, email, password, inviteCode, code, phone, avatar } = req.body;
-=======
-    const { name, email, password, role, roleTitle, responsibility, contactPhone, inviteCode } = req.body;
->>>>>>> Stashed changes
+    const { name, email, password, role, roleTitle, responsibility, contactPhone, phone, avatar, inviteCode, code } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
@@ -127,18 +123,14 @@ async function register(req, res, next) {
       name,
       email: email.toLowerCase(),
       password,
-<<<<<<< Updated upstream
-      role: assignedRole,
-      workRole: assignedWorkRole,
-      phone: phone || '',
-      avatar: avatar || '',
-=======
-      role: finalRole,
+      role: finalRole || assignedRole,
       roleTitle: finalRoleTitle,
       responsibility: finalResponsibility,
-      contactPhone: contactPhone || '',
+      workRole: assignedWorkRole || 'OPERATIONS',
+      phone: phone || contactPhone || '',
+      contactPhone: contactPhone || phone || '',
+      avatar: avatar || '',
       status: 'ACTIVE',
->>>>>>> Stashed changes
     });
 
     // Auto-join event committee if invite was event-specific
@@ -181,13 +173,11 @@ async function register(req, res, next) {
           name: user.name,
           email: user.email,
           role: user.role,
-<<<<<<< Updated upstream
           workRole: user.workRole || assignedWorkRole,
-=======
           roleTitle: user.roleTitle,
           responsibility: user.responsibility,
-          contactPhone: user.contactPhone,
->>>>>>> Stashed changes
+          contactPhone: user.contactPhone || user.phone,
+          phone: user.phone || user.contactPhone,
         },
         token,
       },
@@ -225,13 +215,11 @@ async function login(req, res, next) {
           name: user.name,
           email: user.email,
           role: user.role,
-<<<<<<< Updated upstream
           workRole: user.workRole || 'OPERATIONS',
-=======
           roleTitle: user.roleTitle || (user.role === 'anchor' ? 'Stage Anchor / MC' : 'Event Lead'),
           responsibility: user.responsibility || (user.role === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Operations + Coordination'),
-          contactPhone: user.contactPhone || '+1 (555) 234-5678',
->>>>>>> Stashed changes
+          contactPhone: user.contactPhone || user.phone || '+1 (555) 234-5678',
+          phone: user.phone || user.contactPhone || '+1 (555) 234-5678',
         },
         token,
       },
@@ -250,7 +238,6 @@ async function getMe(req, res) {
   });
 }
 
-<<<<<<< Updated upstream
 async function validateInvite(req, res, next) {
   try {
     const code = req.body.inviteCode || req.body.code || req.query.code;
@@ -302,6 +289,7 @@ async function getInvites(req, res, next) {
 }
 
 module.exports = {
+  verifyInviteCode,
   register,
   login,
   getMe,
@@ -309,6 +297,3 @@ module.exports = {
   createInvite,
   getInvites,
 };
-=======
-module.exports = { verifyInviteCode, register, login, getMe };
->>>>>>> Stashed changes

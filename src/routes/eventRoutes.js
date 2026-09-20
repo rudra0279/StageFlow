@@ -2,7 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireRole, optionalAuthenticate } = require('../middleware/auth');
+const orgOps = require('../controllers/organizerOperationsController');
 
 const speakerRoutes = require('./speakerRoutes');
 const agendaRoutes = require('./agendaRoutes');
@@ -31,9 +32,6 @@ router.route('/')
   .post(authenticate, eventController.createEvent)
   .get(eventController.getEvents);
 
-const { optionalAuthenticate } = require('../middleware/auth');
-const orgOps = require('../controllers/organizerOperationsController');
-
 router.route('/:id')
   .get(eventController.getEventById)
   .put(authenticate, eventController.updateEvent)
@@ -43,7 +41,6 @@ router.get('/:id/live-state', eventController.getLiveState);
 router.get('/:id/run-of-show', eventController.getRunOfShow);
 router.get('/:id/export', eventController.getRunOfShow);
 
-<<<<<<< Updated upstream
 // Event Work Types configuration
 router.get('/:id/work-types', eventController.getEventWorkTypes);
 router.put(
@@ -53,20 +50,6 @@ router.put(
   eventController.updateEventWorkTypes
 );
 
-// Run-of-Show PDF Exporter Data Endpoints (Stage 5)
-router.get(
-  '/:id/run-of-show',
-  authenticate,
-  requireRole('organizer', 'ORGANIZER', 'admin', 'ADMIN'),
-  eventController.getRunOfShow
-);
-router.get(
-  '/:id/export',
-  authenticate,
-  requireRole('organizer', 'ORGANIZER', 'admin', 'ADMIN'),
-  eventController.getRunOfShow
-);
-=======
 // Organizer Committee Directory
 router.get('/:id/committee', optionalAuthenticate, orgOps.getCommittee);
 
@@ -85,6 +68,5 @@ router.route('/:id/tasks/:taskId')
 router.route('/:id/messages')
   .get(optionalAuthenticate, orgOps.getMessages)
   .post(optionalAuthenticate, orgOps.sendMessage);
->>>>>>> Stashed changes
 
 module.exports = router;

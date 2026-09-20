@@ -90,59 +90,6 @@ const socketEmitter = {
   },
 
   emitTaskCreated: (eventId, task) => {
-<<<<<<< Updated upstream
-    emitToEventRoom(eventId, SERVER_EVENTS.TASK_CREATED, {
-      eventId,
-      task,
-      timestamp: new Date().toISOString(),
-    });
-  },
-
-  emitTaskAssigned: (eventId, task) => {
-    emitToEventRoom(eventId, SERVER_EVENTS.TASK_ASSIGNED, {
-      eventId,
-      task,
-      timestamp: new Date().toISOString(),
-    });
-  },
-
-  emitTaskUpdated: (eventId, task) => {
-    emitToEventRoom(eventId, SERVER_EVENTS.TASK_UPDATED, {
-      eventId,
-      task,
-      timestamp: new Date().toISOString(),
-    });
-  },
-
-  emitTaskCompleted: (eventId, task) => {
-    emitToEventRoom(eventId, SERVER_EVENTS.TASK_COMPLETED, {
-      eventId,
-      task,
-      timestamp: new Date().toISOString(),
-    });
-  },
-
-  emitTaskDeleted: (eventId, payload) => {
-    emitToEventRoom(eventId, SERVER_EVENTS.TASK_DELETED, {
-      eventId,
-      ...payload,
-      timestamp: new Date().toISOString(),
-    });
-  },
-
-  emitOrganizerChatMessage: (eventId, chatMessage) => {
-    const chatRoom = getOrganizerChatRoom(eventId);
-    emitToRoom(chatRoom, SERVER_EVENTS.ORGANIZER_CHAT_MESSAGE, {
-      eventId,
-      message: chatMessage,
-      timestamp: new Date().toISOString(),
-    });
-    emitToRoom(chatRoom, SERVER_EVENTS.CHAT_MESSAGE, {
-      eventId,
-      message: chatMessage,
-      timestamp: new Date().toISOString(),
-    });
-=======
     try {
       const io = getIO();
       const payload = { eventId, task, timestamp: new Date().toISOString() };
@@ -150,9 +97,21 @@ const socketEmitter = {
       io.to(`event_${eventId}`).emit('taskCreated', payload);
       io.to(`event_${eventId}_organizers`).emit('taskCreated', payload);
       io.to(`event:${eventId}:organizers`).emit('taskCreated', payload);
-      logger.socket(`Broadcasted [taskCreated] for event [${eventId}]`, task);
+      emitToEventRoom(eventId, SERVER_EVENTS.TASK_CREATED || 'task:created', payload);
     } catch (error) {
       logger.error('[SOCKET]', `Failed to emit taskCreated to event ${eventId}`, error);
+    }
+  },
+
+  emitTaskAssigned: (eventId, task) => {
+    try {
+      emitToEventRoom(eventId, SERVER_EVENTS.TASK_ASSIGNED || 'task:assigned', {
+        eventId,
+        task,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('[SOCKET]', `Failed to emit taskAssigned to event ${eventId}`, error);
     }
   },
 
@@ -164,23 +123,52 @@ const socketEmitter = {
       io.to(`event_${eventId}`).emit('taskUpdated', payload);
       io.to(`event_${eventId}_organizers`).emit('taskUpdated', payload);
       io.to(`event:${eventId}:organizers`).emit('taskUpdated', payload);
-      logger.socket(`Broadcasted [taskUpdated] for event [${eventId}]`, task);
+      emitToEventRoom(eventId, SERVER_EVENTS.TASK_UPDATED || 'task:updated', payload);
     } catch (error) {
       logger.error('[SOCKET]', `Failed to emit taskUpdated to event ${eventId}`, error);
     }
   },
 
-  emitTaskDeleted: (eventId, taskId) => {
+  emitTaskCompleted: (eventId, task) => {
+    try {
+      emitToEventRoom(eventId, SERVER_EVENTS.TASK_COMPLETED || 'task:completed', {
+        eventId,
+        task,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('[SOCKET]', `Failed to emit taskCompleted to event ${eventId}`, error);
+    }
+  },
+
+  emitTaskDeleted: (eventId, payloadOrTaskId) => {
     try {
       const io = getIO();
-      const payload = { eventId, taskId, timestamp: new Date().toISOString() };
+      const taskId = typeof payloadOrTaskId === 'object' ? payloadOrTaskId.taskId : payloadOrTaskId;
+      const payload = typeof payloadOrTaskId === 'object' ? { eventId, ...payloadOrTaskId } : { eventId, taskId };
+      payload.timestamp = new Date().toISOString();
       io.to(`event:${eventId}`).emit('taskDeleted', payload);
       io.to(`event_${eventId}`).emit('taskDeleted', payload);
       io.to(`event_${eventId}_organizers`).emit('taskDeleted', payload);
       io.to(`event:${eventId}:organizers`).emit('taskDeleted', payload);
-      logger.socket(`Broadcasted [taskDeleted] for event [${eventId}]`, { taskId });
+      emitToEventRoom(eventId, SERVER_EVENTS.TASK_DELETED || 'task:deleted', payload);
     } catch (error) {
       logger.error('[SOCKET]', `Failed to emit taskDeleted to event ${eventId}`, error);
+    }
+  },
+
+  emitOrganizerChatMessage: (eventId, chatMessage) => {
+    try {
+      const chatRoom = getOrganizerChatRoom(eventId);
+      const payload = {
+        eventId,
+        message: chatMessage,
+        timestamp: new Date().toISOString(),
+      };
+      emitToRoom(chatRoom, SERVER_EVENTS.ORGANIZER_CHAT_MESSAGE || 'organizer:chat_message', payload);
+      emitToRoom(chatRoom, SERVER_EVENTS.CHAT_MESSAGE || 'chat:message', payload);
+    } catch (error) {
+      logger.error('[SOCKET]', `Failed to emit organizerChatMessage to event ${eventId}`, error);
     }
   },
 
@@ -196,7 +184,6 @@ const socketEmitter = {
     } catch (error) {
       logger.error('[SOCKET]', `Failed to emit commandChatMessage to event ${eventId}`, error);
     }
->>>>>>> Stashed changes
   },
 };
 
