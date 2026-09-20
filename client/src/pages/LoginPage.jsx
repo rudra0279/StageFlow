@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../api/authApi';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
-import { Radio, Lock, Mail, Zap } from 'lucide-react';
+import { Radio, Lock, Mail } from 'lucide-react';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -36,16 +36,6 @@ export const LoginPage = () => {
     }
   };
 
-  const handleQuickFill = (role) => {
-    if (role === 'ORGANIZER') {
-      setEmail('organizer@stagepilot.io');
-      setPassword('password123');
-    } else {
-      setEmail('anchor@stagepilot.io');
-      setPassword('password123');
-    }
-  };
-
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-stage-900 border border-stage-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
@@ -65,30 +55,6 @@ export const LoginPage = () => {
             {error}
           </div>
         )}
-
-        {/* Quick Demo Fill Buttons */}
-        <div className="mb-6 p-3 rounded-xl bg-stage-950 border border-stage-800">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            Hackathon 1-Click Demo Login
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('ORGANIZER')}
-              className="py-1.5 px-2 rounded-lg bg-stage-900 border border-stage-700 hover:border-cyan-400 text-xs font-semibold text-cyan-300 transition-colors"
-            >
-              Organizer Demo
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('ANCHOR')}
-              className="py-1.5 px-2 rounded-lg bg-stage-900 border border-stage-700 hover:border-purple-400 text-xs font-semibold text-purple-300 transition-colors"
-            >
-              Anchor Demo
-            </button>
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

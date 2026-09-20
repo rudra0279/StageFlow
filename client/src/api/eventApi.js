@@ -27,8 +27,11 @@ export const eventApi = {
   },
 
   exportRunOfShowPdf: async (id) => {
-    const res = await axiosClient.get(`/events/${id}/run-of-show`, {
-      responseType: 'blob'
+    const res = await axiosClient.get(`/events/${id}/run-of-show?format=pdf`, {
+      responseType: 'blob',
+      headers: {
+        Accept: 'application/pdf'
+      }
     });
     return res;
   },
