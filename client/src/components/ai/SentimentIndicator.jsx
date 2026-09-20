@@ -3,7 +3,7 @@ import { Smile, TrendingUp } from 'lucide-react';
 
 export const SentimentIndicator = ({ score = 88 }) => {
   return (
-    <div className="glass-panel p-4 rounded-2xl flex items-center justify-between">
+    <div className="bg-stage-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
           <Smile className="w-5 h-5" />

@@ -1,11 +1,11 @@
 import React from 'react';
-import { Gauge, Mic, Zap } from 'lucide-react';
+import { Gauge, Zap } from 'lucide-react';
 
 export const SpeechAssistant = ({ targetWPM = 145, currentWPM = 142 }) => {
   const isPaceGood = Math.abs(currentWPM - targetWPM) < 15;
 
   return (
-    <div className="glass-panel p-5 rounded-2xl flex items-center justify-between gap-4">
+    <div className="bg-stage-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         <div className={`p-3 rounded-xl border ${isPaceGood ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'}`}>
           <Gauge className="w-5 h-5" />

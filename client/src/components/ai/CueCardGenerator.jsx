@@ -1,36 +1,47 @@
 import React, { useState } from 'react';
-import { Sparkles, FileText, CheckCircle2, ArrowRight } from 'lucide-react';
-import { useAI } from '../../hooks/useAI';
+import { Sparkles, CheckCircle2 } from 'lucide-react';
+import { aiApi } from '../../api/aiApi';
 
-export const CueCardGenerator = ({ speaker, onGenerated }) => {
-  const { generateScript } = useAI();
+export const CueCardGenerator = ({ eventId, session, speaker, onGenerated }) => {
   const [loading, setLoading] = useState(false);
   const [cueCard, setCueCard] = useState(null);
 
   const handleGenerate = async () => {
-    if (!speaker) return;
+    if (!speaker && !session) return;
     setLoading(true);
     try {
-      const res = await generateScript({
-        speakerName: speaker.name,
-        topic: speaker.topic,
-        durationMinutes: 15,
+      const res = await aiApi.generateScript({
+        eventId,
+        sessionId: session?._id,
+        scriptType: 'SPEAKER_INTRO',
+        tone: 'ENTHUSIASTIC',
+        customParams: {
+          speakerName: speaker?.name || session?.speakerName,
+          topic: session?.title,
+        },
       });
+
       const generated = {
-        title: `Cue Card: ${speaker.name}`,
-        intro: `Welcome ${speaker.name}, ${speaker.role} at ${speaker.company}.`,
-        script: res.script,
-        bulletPoints: speaker.keyPoints || ['Key Insight 1', 'Live Demo Transition', 'Q&A Prompt'],
+        title: `Cue Card: ${speaker?.name || session?.speakerName || 'Speaker'}`,
+        intro: `Introducing ${speaker?.name || session?.speakerName || 'our speaker'}, speaking on "${session?.title || 'Keynote'}".`,
+        script: res?.data?.script || res?.script || 'Welcome to the stage!',
+        bulletPoints: speaker?.keyPoints || [
+          `Topic: ${session?.title || 'Main Session'}`,
+          'Live Demo Transition',
+          'Audience Q&A Prompt'
+        ],
       };
       setCueCard(generated);
       if (onGenerated) onGenerated(generated);
+    } catch (err) {
+      console.error('Failed to generate cue card:', err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="glass-panel p-5 rounded-2xl border border-cyan-500/20">
+    <div className="bg-stage-900 border border-slate-800 p-5 rounded-2xl">
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-cyan-400" />
@@ -47,7 +58,7 @@ export const CueCardGenerator = ({ speaker, onGenerated }) => {
         </button>
       </div>
 
-      {cueCard ? (
+      {cueCard && (
         <div className="space-y-3 mt-3">
           <p className="text-xs font-semibold text-cyan-300 italic">{cueCard.intro}</p>
           <div className="space-y-1.5 pt-2 border-t border-slate-800">
@@ -59,10 +70,6 @@ export const CueCardGenerator = ({ speaker, onGenerated }) => {
             ))}
           </div>
         </div>
-      ) : (
-        <p className="text-xs text-slate-400 py-4 text-center">
-          Click Auto-Generate to produce speaker introduction scripts and bullet prompts.
-        </p>
       )}
     </div>
   );
