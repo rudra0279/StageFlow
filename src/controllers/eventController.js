@@ -27,7 +27,7 @@ async function createEvent(req, res, next) {
         name: req.user ? req.user.name : 'Event Organizer',
         email: req.user ? req.user.email : 'organizer@event.io',
         role: 'organizer',
-        workRole: ORGANIZER_WORK_ROLES.EVENT_LEAD,
+        workRole: ORGANIZER_WORK_ROLES ? ORGANIZER_WORK_ROLES.EVENT_LEAD : 'Event Lead',
         assignedResponsibilities: ['Overall Event Direction', 'Schedule Authority'],
         joinedAt: new Date().toISOString(),
         isActive: true,

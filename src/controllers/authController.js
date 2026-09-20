@@ -49,7 +49,20 @@ async function verifyInviteCode(req, res, next) {
 
 async function register(req, res, next) {
   try {
-    const { name, email, password, role, roleTitle, responsibility, contactPhone, phone, avatar, inviteCode, code } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      roleTitle,
+      responsibility,
+      contactPhone,
+      inviteCode,
+      code,
+      phone,
+      avatar,
+    } = req.body;
+
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
@@ -57,27 +70,41 @@ async function register(req, res, next) {
     const effectiveCode = inviteCode || code;
     let assignedRole = role || 'organizer';
     let assignedWorkRole = 'OPERATIONS';
-    let finalRoleTitle = roleTitle || (assignedRole === 'anchor' ? 'Stage Anchor / MC' : 'Event Lead');
-    let finalResponsibility = responsibility || (assignedRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Operations + Coordination');
+    let assignedRoleTitle = roleTitle || (assignedRole === 'anchor' ? 'Stage Anchor / MC' : 'Organizer');
+    let assignedResponsibility = responsibility || (assignedRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Event Operations & Coordination');
     let eventIdToJoin = null;
 
     if (effectiveCode) {
-      const validation = await validateInviteCode(effectiveCode);
-      if (!validation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: validation.message || 'Invalid invite code',
-        });
+      const cleanCode = effectiveCode.trim().toUpperCase();
+      const InviteCode = require('../models/InviteCode');
+      const invite = await InviteCode.findOne({ code: cleanCode });
+      if (!invite) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
       }
-      assignedRole = validation.invite.role || assignedRole;
-      assignedWorkRole = validation.invite.workRole || 'OPERATIONS';
-      finalRoleTitle = validation.invite.roleTitle || finalRoleTitle;
-      finalResponsibility = validation.invite.responsibility || finalResponsibility;
-      eventIdToJoin = validation.invite.eventId || null;
-      await consumeInviteCode(effectiveCode);
+      if (invite.status === 'EXPIRED' || (invite.expiresAt && new Date(invite.expiresAt) < new Date())) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+      }
+      if (invite.status === 'DISABLED' || invite.isActive === false) {
+        return res.status(400).json({ success: false, message: 'This invitation code has been disabled.' });
+      }
+      if (invite.status === 'EXHAUSTED' || (invite.maxUses && (invite.usageCount >= invite.maxUses || invite.currentUses >= invite.maxUses))) {
+        return res.status(400).json({ success: false, message: 'This invitation code has exceeded its usage limit.' });
+      }
+
+      assignedRole = invite.role || assignedRole;
+      assignedRoleTitle = invite.roleTitle || assignedRoleTitle;
+      assignedResponsibility = invite.responsibility || assignedResponsibility;
+      assignedWorkRole = invite.workRole || 'OPERATIONS';
+      eventIdToJoin = invite.eventId || null;
+
+      if (invite._id) {
+        await InviteCode.findByIdAndUpdate(invite._id, { $inc: { usageCount: 1, currentUses: 1 } });
+      }
     } else {
       if (process.env.NODE_ENV === 'test' || process.env.ALLOW_OPEN_REGISTRATION === 'true') {
-        assignedRole = role || 'organizer';
+        assignedRole = req.body.role || 'organizer';
+        assignedRoleTitle = req.body.roleTitle || (assignedRole === 'anchor' ? 'Stage Anchor / MC' : 'Organizer');
+        assignedResponsibility = req.body.responsibility || (assignedRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Event Operations & Coordination');
       } else {
         return res.status(400).json({
           success: false,
@@ -86,16 +113,21 @@ async function register(req, res, next) {
       }
     }
 
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+    }
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password,
       role: assignedRole,
       workRole: assignedWorkRole,
-      roleTitle: finalRoleTitle,
-      responsibility: finalResponsibility,
-      contactPhone: contactPhone || phone || '',
+      roleTitle: assignedRoleTitle,
+      responsibility: assignedResponsibility,
       phone: phone || contactPhone || '',
+      contactPhone: contactPhone || phone || '',
       avatar: avatar || '',
       status: 'ACTIVE',
     });
@@ -116,6 +148,8 @@ async function register(req, res, next) {
               email: user.email,
               role: user.role,
               workRole: assignedWorkRole,
+              roleTitle: assignedRoleTitle,
+              responsibility: assignedResponsibility,
               assignedResponsibilities: [],
               joinedAt: new Date().toISOString(),
               isActive: true,
@@ -129,7 +163,7 @@ async function register(req, res, next) {
     }
 
     const token = generateToken(user);
-    logger.auth(`User registered: ${user.email} (${user.role} - ${user.roleTitle})`);
+    logger.auth(`User registered: ${user.email} (${user.role} - ${user.roleTitle || user.workRole})`);
 
     res.status(201).json({
       success: true,
@@ -140,9 +174,10 @@ async function register(req, res, next) {
           email: user.email,
           role: user.role,
           workRole: user.workRole || assignedWorkRole,
-          roleTitle: user.roleTitle,
-          responsibility: user.responsibility,
-          contactPhone: user.contactPhone,
+          roleTitle: user.roleTitle || assignedRoleTitle,
+          responsibility: user.responsibility || assignedResponsibility,
+          contactPhone: user.contactPhone || user.phone,
+          phone: user.phone || user.contactPhone,
         },
         token,
       },
@@ -183,7 +218,8 @@ async function login(req, res, next) {
           workRole: user.workRole || 'OPERATIONS',
           roleTitle: user.roleTitle || (user.role === 'anchor' ? 'Stage Anchor / MC' : 'Event Lead'),
           responsibility: user.responsibility || (user.role === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Operations + Coordination'),
-          contactPhone: user.contactPhone || '+1 (555) 234-5678',
+          contactPhone: user.contactPhone || user.phone || '+1 (555) 234-5678',
+          phone: user.phone || user.contactPhone || '',
         },
         token,
       },
@@ -237,6 +273,7 @@ async function createInvite(req, res, next) {
 
 async function getInvites(req, res, next) {
   try {
+    const InviteCode = require('../models/InviteCode');
     const filter = {};
     if (req.query.eventId) filter.eventId = req.query.eventId;
     if (req.query.role) filter.role = req.query.role;
@@ -253,10 +290,10 @@ async function getInvites(req, res, next) {
 
 module.exports = {
   verifyInviteCode,
-  register,
-  login,
-  getMe,
   validateInvite,
   createInvite,
   getInvites,
+  register,
+  login,
+  getMe,
 };

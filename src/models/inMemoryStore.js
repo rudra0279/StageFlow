@@ -104,7 +104,13 @@ const collections = {
   Agenda: [],
   Announcement: [],
   Question: [],
-  InviteCode: (typeof DEFAULT_INVITE_CODES !== 'undefined' && Array.isArray(DEFAULT_INVITE_CODES)) ? DEFAULT_INVITE_CODES.map(c => ({ ...c })) : [],
+  InviteCode: DEFAULT_INVITE_CODES.map(c => ({
+    ...c,
+    isActive: c.status !== 'DISABLED',
+    currentUses: c.usageCount || 0,
+    expiresAt: c.status === 'EXPIRED' ? new Date(Date.now() - 86400000) : null,
+    workRole: c.workRole || 'OPERATIONS',
+  })),
   Task: [],
   ChatMessage: [],
 };
