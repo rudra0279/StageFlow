@@ -23,12 +23,17 @@ dist-ssr
 build/
 *.local
 
-# Environment files
+# Environment files & Secrets (API keys and credentials must NEVER be committed)
 .env
+.env.*
+*.env
+*.env.local
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
+!**/.env.example
 
 # Editor directories and files
 .vscode/
