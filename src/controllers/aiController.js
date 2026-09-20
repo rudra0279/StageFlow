@@ -190,10 +190,10 @@ async function handleAnnouncement(req, res) {
 
 async function handleAssistant(req, res) {
   try {
-    const { eventId, query, command, tone, maxLength, speechContext, speechTracking, track, trackId } = req.body;
+    const { eventId, sessionId, query, command, tone, maxLength, speechContext, speechTracking, track, trackId } = req.body;
     const userQuery = query || command || '';
     const resolvedTrack = track || trackId || req.body.currentTrack || null;
-    const currentTrack = resolvedTrack || 'Track A';
+    let currentTrack = resolvedTrack || 'Track A';
 
     if (!userQuery) {
       return res.status(400).json({
@@ -208,14 +208,36 @@ async function handleAssistant(req, res) {
 
     const Agenda = require('../models/Agenda');
     let allSessions = [];
+    let selectedSessionDoc = null;
     if (eventId) {
       allSessions = await Agenda.find({ eventId }).populate('speakerId').sort({ orderIndex: 1 });
+      if (sessionId) {
+        selectedSessionDoc = allSessions.find(s => s._id && s._id.toString() === sessionId.toString());
+        if (selectedSessionDoc && !resolvedTrack) {
+          currentTrack = selectedSessionDoc.track || selectedSessionDoc.trackId || currentTrack;
+        }
+      }
     }
 
     const trackSessions = allSessions.filter(s => (s.track || s.trackId || 'Track A') === currentTrack);
     const liveSession = trackSessions.find(s => s.status === 'LIVE');
     const upcomingSessions = trackSessions.filter(s => s.status === 'UPCOMING');
-    const nextSessionObj = (liveSession ? upcomingSessions.find(s => s.orderIndex > liveSession.orderIndex) : null) || upcomingSessions[0] || null;
+    const nextSessionObj = (liveSession ? upcomingSessions.find(s => s.orderIndex > liveSession.orderIndex) : null) ||
+      upcomingSessions[0] ||
+      selectedSessionDoc ||
+      trackSessions[0] ||
+      null;
+
+    const activeSession = selectedSessionDoc || liveSession || nextSessionObj;
+    const speakerDoc = activeSession?.speakerId;
+
+    const speakerName = speakerDoc?.name || activeSession?.speakerName || nextSessionObj?.speakerId?.name || nextSessionObj?.speakerName || 'the speaker';
+    const speakerPronunciation = speakerDoc?.pronunciationGuide || nextSessionObj?.speakerId?.pronunciationGuide || nextSessionObj?.speakerPronunciation || 'Standard pronunciation';
+    const speakerTitle = speakerDoc?.designation || speakerDoc?.title || 'Featured Speaker';
+    const speakerOrg = speakerDoc?.company || speakerDoc?.organization || '';
+    const speakerTopic = speakerDoc?.topic || activeSession?.description || activeSession?.title || 'the session topic';
+    const speakerBio = speakerDoc?.bio || speakerDoc?.biography || '';
+    const sessionTitle = activeSession?.title || nextSessionObj?.title || 'Upcoming Session';
 
     const otherTrackSessions = allSessions.filter(s => (s.track || s.trackId || 'Track A') !== currentTrack);
     const otherTracksMap = [];
@@ -234,18 +256,81 @@ async function handleAssistant(req, res) {
     let lowerQuery = userQuery.toLowerCase();
     let trackDelayMinutes = liveSession ? (liveSession.delayMinutes || 0) : 0;
 
-    if (lowerQuery.includes('next') || lowerQuery.includes('introduce')) {
-      const speaker = nextSessionObj?.speakerId?.name || nextSessionObj?.speakerName || 'speaker';
-      answer = `The next session on ${currentTrack} is "${nextSessionObj?.title}" presented by ${speaker}.`;
-    } else if (lowerQuery.includes('delay')) {
+    // 1. Quick 1-sentence speaker fact / bio
+    if (
+      lowerQuery.includes('speaker fact') ||
+      lowerQuery.includes('fact') ||
+      lowerQuery.includes('bio') ||
+      lowerQuery.includes('about the speaker')
+    ) {
+      if (speakerBio && speakerBio.length > 15) {
+        const firstSentence = speakerBio.split(/(?<=[.!?])\s+/)[0].trim();
+        answer = `Speaker Fact for ${currentTrack}: ${speakerName} (${speakerPronunciation}) — ${firstSentence}`;
+      } else if (speakerOrg) {
+        answer = `Speaker Fact for ${currentTrack}: ${speakerName} is ${speakerTitle} at ${speakerOrg}, specializing in ${speakerTopic}.`;
+      } else {
+        answer = `Speaker Fact for ${currentTrack}: ${speakerName} is ${speakerTitle}, widely recognized for driving innovations in ${speakerTopic}.`;
+      }
+    }
+    // 2. Audience show-of-hands question / icebreaker / poll
+    else if (
+      lowerQuery.includes('show-of-hands') ||
+      lowerQuery.includes('show of hands') ||
+      lowerQuery.includes('hands') ||
+      lowerQuery.includes('icebreaker') ||
+      lowerQuery.includes('poll') ||
+      lowerQuery.includes('audience question')
+    ) {
+      const cleanTopic = sessionTitle.replace(/^(keynote:|workshop:|talk:|panel:|fireside chat:)\s*/i, '').trim();
+      answer = `Show-of-Hands Question for ${currentTrack}: "Quick show of hands before we begin: How many of you in the audience have actively worked with or invested in ${cleanTopic}? ... Keep them up for a moment—look around the room!"`;
+    }
+    // 3. 30s filler line for technical pause / buffer
+    else if (
+      lowerQuery.includes('filler') ||
+      lowerQuery.includes('pause') ||
+      lowerQuery.includes('technical') ||
+      lowerQuery.includes('30s') ||
+      lowerQuery.includes('stall') ||
+      lowerQuery.includes('buffer')
+    ) {
+      answer = `30s Technical Filler for ${currentTrack}: "While our stage production crew finalizes AV checks and slide calibration for ${speakerName}, take a quick 30-second stretch. Be sure to check the StagePilot app to submit and upvote questions for '${sessionTitle}'. We are getting underway in just a moment—stay right with us!"`;
+    }
+    // 4. Speaker introduction
+    else if (lowerQuery.includes('introduce') || lowerQuery.includes('intro')) {
+      const spk = nextSessionObj?.speakerId?.name || nextSessionObj?.speakerName || speakerName;
+      const pron = nextSessionObj?.speakerId?.pronunciationGuide || nextSessionObj?.speakerPronunciation || speakerPronunciation;
+      const ttl = nextSessionObj?.title || sessionTitle;
+      answer = `Please welcome ${spk} (${pron}) presenting "${ttl}" on ${currentTrack}.`;
+    }
+    // 5. Next session query
+    else if (lowerQuery.includes('next')) {
+      const spk = nextSessionObj?.speakerId?.name || nextSessionObj?.speakerName || speakerName;
+      const ttl = nextSessionObj?.title || sessionTitle;
+      answer = `The next session on ${currentTrack} is "${ttl}" presented by ${spk}.`;
+    }
+    // 6. Track delay
+    else if (lowerQuery.includes('delay')) {
       answer = `${currentTrack} is currently delayed by ${trackDelayMinutes || 10} minutes.`;
       trackDelayMinutes = trackDelayMinutes || 10;
-    } else if (lowerQuery.includes('other stages') || lowerQuery.includes('other tracks')) {
+    }
+    // 7. Other stages / tracks
+    else if (
+      lowerQuery.includes('other stages') ||
+      lowerQuery.includes('other tracks') ||
+      lowerQuery.includes('other stage') ||
+      lowerQuery.includes('other track')
+    ) {
       answer = `On other stages: ${otherTracksMap.map(t => `${t.track}: ${t.title}`).join('; ')}.`;
-    } else if (lowerQuery.includes('transition')) {
-      answer = `Welcome to ${currentTrack}. Next up is ${nextSessionObj?.speakerId?.name || 'our speaker'} presenting ${nextSessionObj?.title}.`;
-    } else {
-      answer = `StagePilot AI Co-Pilot for ${currentTrack}: Next up is ${nextSessionObj?.speakerId?.name || 'speaker'} with "${nextSessionObj?.title}".`;
+    }
+    // 8. Transition
+    else if (lowerQuery.includes('transition')) {
+      const spk = nextSessionObj?.speakerId?.name || nextSessionObj?.speakerName || speakerName;
+      const ttl = nextSessionObj?.title || sessionTitle;
+      answer = `Welcome to ${currentTrack}. Next up is ${spk} presenting ${ttl}.`;
+    }
+    // 9. Default contextual fallback
+    else {
+      answer = `StagePilot AI Co-Pilot for ${currentTrack}: Currently tracking "${sessionTitle}" with ${speakerName} (${speakerTitle}). You can ask for a 1-sentence speaker fact, audience show-of-hands question, or 30s technical filler line.`;
     }
 
     const nextSessionFormatted = nextSessionObj ? {

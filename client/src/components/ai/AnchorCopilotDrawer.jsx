@@ -51,6 +51,7 @@ export const AnchorCopilotDrawer = ({
       const res = await aiApi.askCopilot({
         eventId,
         sessionId: session?._id,
+        track: session?.track || session?.room,
         query: text
       });
 

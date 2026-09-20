@@ -12,10 +12,11 @@ export const aiApi = {
     return res.data;
   },
 
-  askCopilot: async ({ eventId, sessionId, query }) => {
+  askCopilot: async ({ eventId, sessionId, track, query }) => {
     const res = await axiosClient.post('/ai/copilot-query', {
       eventId,
       sessionId,
+      track,
       query
     });
     return res.data;
