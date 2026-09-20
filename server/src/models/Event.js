@@ -61,6 +61,10 @@ const eventSchema = new mongoose.Schema(
     theme: {
       type: String,
       default: 'Tech & Innovation'
+    },
+    workAreas: {
+      type: [String],
+      default: ['Stage Management', 'Speaker Management', 'Registration', 'Technical / AV', 'Logistics']
     }
   },
   { timestamps: true }

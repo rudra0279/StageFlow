@@ -4,6 +4,8 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticate, requireRole } = require('../middleware/auth');
 
+router.post('/verify-code', authController.verifyInviteCode);
+router.post('/verifyCode', authController.verifyInviteCode);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.get('/me', authenticate, authController.getMe);

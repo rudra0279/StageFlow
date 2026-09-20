@@ -31,6 +31,9 @@ router.route('/')
   .post(authenticate, eventController.createEvent)
   .get(eventController.getEvents);
 
+const { optionalAuthenticate } = require('../middleware/auth');
+const orgOps = require('../controllers/organizerOperationsController');
+
 router.route('/:id')
   .get(eventController.getEventById)
   .put(authenticate, eventController.updateEvent)
@@ -38,7 +41,9 @@ router.route('/:id')
 
 router.get('/:id/live-state', eventController.getLiveState);
 router.get('/:id/run-of-show', eventController.getRunOfShow);
+router.get('/:id/export', eventController.getRunOfShow);
 
+<<<<<<< Updated upstream
 // Event Work Types configuration
 router.get('/:id/work-types', eventController.getEventWorkTypes);
 router.put(
@@ -61,5 +66,25 @@ router.get(
   requireRole('organizer', 'ORGANIZER', 'admin', 'ADMIN'),
   eventController.getRunOfShow
 );
+=======
+// Organizer Committee Directory
+router.get('/:id/committee', optionalAuthenticate, orgOps.getCommittee);
+
+// Task Management
+router.route('/:id/tasks')
+  .get(optionalAuthenticate, orgOps.getTasks)
+  .post(optionalAuthenticate, orgOps.createTask);
+
+router.post('/:id/tasks/batch', optionalAuthenticate, orgOps.batchCreateTasks);
+
+router.route('/:id/tasks/:taskId')
+  .patch(optionalAuthenticate, orgOps.updateTask)
+  .delete(optionalAuthenticate, orgOps.deleteTask);
+
+// Organizer Command Chat
+router.route('/:id/messages')
+  .get(optionalAuthenticate, orgOps.getMessages)
+  .post(optionalAuthenticate, orgOps.sendMessage);
+>>>>>>> Stashed changes
 
 module.exports = router;

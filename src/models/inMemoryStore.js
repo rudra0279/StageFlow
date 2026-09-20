@@ -6,6 +6,97 @@ function newObjectId() {
   return crypto.randomBytes(12).toString('hex');
 }
 
+const DEFAULT_INVITE_CODES = [
+  {
+    _id: 'code-org-7f29x',
+    code: 'ORG-7F29X',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Event Lead',
+    responsibility: 'Operations + Coordination',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-tech-4b82y',
+    code: 'TECH-4B82Y',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Technical Lead',
+    responsibility: 'AV + Stage Technology',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-stage-91c2m',
+    code: 'STAGE-91C2M',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Stage Manager',
+    responsibility: 'Presentation systems & Timing',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-log-33a8k',
+    code: 'LOG-33A8K',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Logistics Lead',
+    responsibility: 'Venue Operations & Hospitality',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-anc-55d1p',
+    code: 'ANC-55D1P',
+    registrationType: 'ANCHOR',
+    role: 'anchor',
+    roleTitle: 'Stage Anchor / MC',
+    responsibility: 'Stage MC & Teleprompter Execution',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-expired-99',
+    code: 'EXPIRED-99',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Event Lead',
+    responsibility: 'Operations',
+    status: 'EXPIRED',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-disabled-88',
+    code: 'DISABLED-88',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Technical Lead',
+    responsibility: 'AV Setup',
+    status: 'DISABLED',
+    usageCount: 0,
+    maxUses: 100
+  },
+  {
+    _id: 'code-exhausted-77',
+    code: 'EXHAUSTED-77',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Volunteer',
+    responsibility: 'Audience Control',
+    status: 'EXHAUSTED',
+    usageCount: 10,
+    maxUses: 10
+  }
+];
+
 const collections = {
   User: [],
   Event: [],
@@ -13,7 +104,11 @@ const collections = {
   Agenda: [],
   Announcement: [],
   Question: [],
+<<<<<<< Updated upstream
   InviteCode: [],
+=======
+  InviteCode: DEFAULT_INVITE_CODES.map(c => ({ ...c })),
+>>>>>>> Stashed changes
   Task: [],
   ChatMessage: [],
 };
@@ -343,6 +438,7 @@ function clearAllMemoryCollections() {
   for (const key in collections) {
     collections[key] = [];
   }
+  collections.InviteCode = DEFAULT_INVITE_CODES.map(c => ({ ...c }));
 }
 
 module.exports = {
@@ -355,6 +451,10 @@ module.exports = {
   MemoryInviteCode,
   MemoryTask,
   MemoryChatMessage,
+<<<<<<< Updated upstream
+=======
+  DEFAULT_INVITE_CODES,
+>>>>>>> Stashed changes
   clearAllMemoryCollections,
   collections,
 };

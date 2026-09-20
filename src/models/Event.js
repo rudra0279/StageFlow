@@ -60,6 +60,7 @@ const EventSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+<<<<<<< Updated upstream
     workTypes: {
       type: Array,
       default: () => {
@@ -74,6 +75,15 @@ const EventSchema = new mongoose.Schema(
     committee: {
       type: Array,
       default: [],
+=======
+    theme: {
+      type: String,
+      default: 'Tech & Innovation',
+    },
+    workAreas: {
+      type: [String],
+      default: ['Stage Management', 'Speaker Management', 'Registration', 'Technical / AV', 'Logistics'],
+>>>>>>> Stashed changes
     },
   },
   { timestamps: true }

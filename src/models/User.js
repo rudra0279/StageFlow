@@ -28,6 +28,23 @@ const UserSchema = new mongoose.Schema(
       enum: ['organizer', 'anchor', 'admin'],
       default: 'organizer',
     },
+    roleTitle: {
+      type: String,
+      default: 'Organizer',
+    },
+    responsibility: {
+      type: String,
+      default: 'Event Operations & Coordination',
+    },
+    contactPhone: {
+      type: String,
+      default: '',
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE'],
+      default: 'ACTIVE',
+    },
   },
   { timestamps: true }
 );

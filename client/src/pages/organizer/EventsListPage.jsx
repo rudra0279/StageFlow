@@ -11,6 +11,28 @@ import { Input } from '../../components/common/Input';
 import { Calendar, Plus, MapPin, ArrowRight, ShieldCheck, FileDown, AlertCircle } from 'lucide-react';
 import { getHealthBadgeConfig } from '../../utils/healthUtils';
 
+const ALL_WORK_AREAS = [
+  'Stage Management',
+  'Speaker Management',
+  'Registration',
+  'Technical / AV',
+  'Logistics',
+  'Hospitality',
+  'Marketing',
+  'Media',
+  'Security',
+  'Volunteers',
+  'Finance'
+];
+
+const DEFAULT_SELECTED_WORK_AREAS = [
+  'Stage Management',
+  'Speaker Management',
+  'Registration',
+  'Technical / AV',
+  'Logistics'
+];
+
 export const EventsListPage = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +40,7 @@ export const EventsListPage = () => {
   const [title, setTitle] = useState('');
   const [venue, setVenue] = useState('Main Convention Hall');
   const [theme, setTheme] = useState('AI & Future Systems');
+  const [selectedWorkAreas, setSelectedWorkAreas] = useState(DEFAULT_SELECTED_WORK_AREAS);
   const [submitting, setSubmitting] = useState(false);
 
   // Stage 5 export state per card
@@ -59,6 +82,12 @@ export const EventsListPage = () => {
     }
   };
 
+  const toggleWorkArea = (area) => {
+    setSelectedWorkAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -69,6 +98,7 @@ export const EventsListPage = () => {
         title,
         venue,
         theme,
+        workAreas: selectedWorkAreas,
         date: new Date().toISOString()
       });
       setIsCreateModalOpen(false);
@@ -84,7 +114,6 @@ export const EventsListPage = () => {
     return <Loader text="Loading live events..." />;
   }
 
-  return (
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Hero Header */}
@@ -234,6 +263,41 @@ export const EventsListPage = () => {
             placeholder="e.g. Autonomous Agents & Spatial Robotics"
             required
           />
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-300">
+                Event Work Areas ({selectedWorkAreas.length} Active)
+              </label>
+              <span className="text-[10px] text-cyan-400 font-mono">Persisted to Command Center</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mb-2.5">
+              Select operational areas active for this event. Tasks and committee assignments will be categorized accordingly.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-xl bg-stage-950 border border-stage-800">
+              {ALL_WORK_AREAS.map((area) => {
+                const isChecked = selectedWorkAreas.includes(area);
+                return (
+                  <label
+                    key={area}
+                    className={`flex items-center gap-2 p-2 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                      isChecked
+                        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200'
+                        : 'bg-stage-900/50 border-stage-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleWorkArea(area)}
+                      className="rounded border-stage-700 bg-stage-900 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-stage-950 w-3.5 h-3.5"
+                    />
+                    <span className="truncate">{area}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-stage-800">
             <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>

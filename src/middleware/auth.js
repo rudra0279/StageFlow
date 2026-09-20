@@ -38,4 +38,21 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authenticate, requireRole };
+async function optionalAuthenticate(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-password');
+      if (user) {
+        req.user = user;
+      }
+    }
+  } catch (err) {
+    // Ignore invalid token in optional authentication
+  }
+  next();
+}
+
+module.exports = { authenticate, requireRole, optionalAuthenticate };

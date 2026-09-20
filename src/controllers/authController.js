@@ -17,9 +17,57 @@ function generateToken(user) {
   );
 }
 
+async function verifyInviteCode(req, res, next) {
+  try {
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const InviteCode = require('../models/InviteCode');
+    const invite = await InviteCode.findOne({ code: cleanCode });
+
+    if (!invite) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    }
+
+    if (invite.status === 'EXPIRED' || (invite.expiresAt && new Date(invite.expiresAt) < new Date())) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    }
+
+    if (invite.status === 'DISABLED') {
+      return res.status(400).json({ success: false, message: 'This invitation code has been disabled.' });
+    }
+
+    if (invite.status === 'EXHAUSTED' || (invite.maxUses && invite.usageCount >= invite.maxUses)) {
+      return res.status(400).json({ success: false, message: 'This invitation code has exceeded its usage limit.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Invitation code verified successfully',
+      data: {
+        valid: true,
+        code: invite.code,
+        registrationType: invite.registrationType || 'ORGANIZER',
+        role: invite.role || 'organizer',
+        roleTitle: invite.roleTitle || 'Organizer',
+        responsibility: invite.responsibility || 'Event Operations & Coordination',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function register(req, res, next) {
   try {
+<<<<<<< Updated upstream
     const { name, email, password, inviteCode, code, phone, avatar } = req.body;
+=======
+    const { name, email, password, role, roleTitle, responsibility, contactPhone, inviteCode } = req.body;
+>>>>>>> Stashed changes
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
@@ -59,14 +107,38 @@ async function register(req, res, next) {
       return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
+    let finalRole = role || 'organizer';
+    let finalRoleTitle = roleTitle || (finalRole === 'anchor' ? 'Stage Anchor / MC' : 'Organizer');
+    let finalResponsibility = responsibility || (finalRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Event Operations & Coordination');
+
+    if (inviteCode) {
+      const InviteCode = require('../models/InviteCode');
+      const cleanCode = inviteCode.trim().toUpperCase();
+      const invite = await InviteCode.findOne({ code: cleanCode });
+      if (invite) {
+        finalRole = invite.role || finalRole;
+        finalRoleTitle = invite.roleTitle || finalRoleTitle;
+        finalResponsibility = invite.responsibility || finalResponsibility;
+        await InviteCode.findByIdAndUpdate(invite._id, { $inc: { usageCount: 1 } });
+      }
+    }
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password,
+<<<<<<< Updated upstream
       role: assignedRole,
       workRole: assignedWorkRole,
       phone: phone || '',
       avatar: avatar || '',
+=======
+      role: finalRole,
+      roleTitle: finalRoleTitle,
+      responsibility: finalResponsibility,
+      contactPhone: contactPhone || '',
+      status: 'ACTIVE',
+>>>>>>> Stashed changes
     });
 
     // Auto-join event committee if invite was event-specific
@@ -99,7 +171,7 @@ async function register(req, res, next) {
     }
 
     const token = generateToken(user);
-    logger.auth(`User registered: ${user.email} (${user.role})`);
+    logger.auth(`User registered: ${user.email} (${user.role} - ${user.roleTitle})`);
 
     res.status(201).json({
       success: true,
@@ -109,7 +181,13 @@ async function register(req, res, next) {
           name: user.name,
           email: user.email,
           role: user.role,
+<<<<<<< Updated upstream
           workRole: user.workRole || assignedWorkRole,
+=======
+          roleTitle: user.roleTitle,
+          responsibility: user.responsibility,
+          contactPhone: user.contactPhone,
+>>>>>>> Stashed changes
         },
         token,
       },
@@ -147,7 +225,13 @@ async function login(req, res, next) {
           name: user.name,
           email: user.email,
           role: user.role,
+<<<<<<< Updated upstream
           workRole: user.workRole || 'OPERATIONS',
+=======
+          roleTitle: user.roleTitle || (user.role === 'anchor' ? 'Stage Anchor / MC' : 'Event Lead'),
+          responsibility: user.responsibility || (user.role === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Operations + Coordination'),
+          contactPhone: user.contactPhone || '+1 (555) 234-5678',
+>>>>>>> Stashed changes
         },
         token,
       },
@@ -166,6 +250,7 @@ async function getMe(req, res) {
   });
 }
 
+<<<<<<< Updated upstream
 async function validateInvite(req, res, next) {
   try {
     const code = req.body.inviteCode || req.body.code || req.query.code;
@@ -224,3 +309,6 @@ module.exports = {
   createInvite,
   getInvites,
 };
+=======
+module.exports = { verifyInviteCode, register, login, getMe };
+>>>>>>> Stashed changes

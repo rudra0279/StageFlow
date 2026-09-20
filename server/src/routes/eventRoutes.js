@@ -18,6 +18,7 @@ import { validate } from '../middleware/validateMiddleware.js';
 import { createEventSchema, updateEventSchema } from '../validators/eventValidator.js';
 import { broadcastAlertSchema } from '../validators/sessionValidator.js';
 import { ROLES } from '../constants/roles.js';
+import * as orgOps from '../controllers/organizerOperationsController.js';
 
 const router = express.Router();
 
@@ -67,5 +68,24 @@ router.get(
   authorize(ROLES.ORGANIZER),
   getRunOfShow
 );
+
+// Organizer Committee Directory
+router.get('/:id/committee', orgOps.getCommittee);
+
+// Task Management
+router.route('/:id/tasks')
+  .get(orgOps.getTasks)
+  .post(orgOps.createTask);
+
+router.post('/:id/tasks/batch', orgOps.batchCreateTasks);
+
+router.route('/:id/tasks/:taskId')
+  .patch(orgOps.updateTask)
+  .delete(orgOps.deleteTask);
+
+// Organizer Command Chat
+router.route('/:id/messages')
+  .get(orgOps.getMessages)
+  .post(orgOps.sendMessage);
 
 export default router;

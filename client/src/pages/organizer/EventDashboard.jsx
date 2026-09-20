@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLiveEvent } from '../../hooks/useLiveEvent';
+import { useAuth } from '../../hooks/useAuth';
+import { SocketContext } from '../../context/SocketContext';
 import { eventApi } from '../../api/eventApi';
 import { exportRunOfShowPdf } from '../../utils/exportUtils';
 import { EventHealthCard } from '../../components/organizer/EventHealthCard';
@@ -8,14 +10,43 @@ import { AgendaManager } from '../../components/organizer/AgendaManager';
 import { BroadcastModal } from '../../components/organizer/BroadcastModal';
 import { ScriptGeneratorModal } from '../../components/ai/ScriptGeneratorModal';
 import { OrganizerQAModeration } from '../../components/organizer/OrganizerQAModeration';
+import { CommitteeDirectory } from '../../components/organizer/CommitteeDirectory';
+import { TaskBoard } from '../../components/organizer/TaskBoard';
+import { EventCommandChat } from '../../components/organizer/EventCommandChat';
 import { Button } from '../../components/common/Button';
 import { Loader } from '../../components/common/Loader';
-import { Radio, ExternalLink, Sparkles, MapPin, Calendar, Clock, FileDown, CheckCircle2, AlertCircle, X, RefreshCw } from 'lucide-react';
+import {
+  Radio,
+  ExternalLink,
+  Sparkles,
+  MapPin,
+  Calendar,
+  Clock,
+  FileDown,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  RefreshCw,
+  LayoutDashboard,
+  ListTodo,
+  MessageSquare,
+  Users,
+  HelpCircle,
+  ShieldCheck,
+  Zap,
+  Sliders
+} from 'lucide-react';
 import { formatTime } from '../../utils/timeUtils';
 
 export const EventDashboard = () => {
   const { id } = useParams();
   const { event, sessions, loadEvent, loading } = useLiveEvent();
+  const { user } = useAuth();
+  const { socket, joinEvent } = useContext(SocketContext) || {};
+
+  // Active Command Center Navigation Tab
+  const [activeTab, setActiveTab] = useState('war-room'); // 'war-room', 'tasks', 'chat', 'committee', 'qa'
+  const [prefillRecipient, setPrefillRecipient] = useState(null);
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [selectedSessionForAI, setSelectedSessionForAI] = useState(null);
@@ -37,6 +68,13 @@ export const EventDashboard = () => {
       });
     }
   }, [id, loadEvent]);
+
+  // Join Socket.IO Event Room on event load
+  useEffect(() => {
+    if (event?._id && joinEvent) {
+      joinEvent(event._id);
+    }
+  }, [event?._id, joinEvent]);
 
   const handleSendBroadcast = async (alertData) => {
     if (!event) return;
@@ -61,7 +99,7 @@ export const EventDashboard = () => {
   };
 
   if (loading && !event) {
-    return <Loader text="Loading Organizer War-Room..." />;
+    return <Loader text="Loading Organizer Command Center..." />;
   }
 
   if (!event) {
@@ -78,7 +116,7 @@ export const EventDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Live Event Command Center Hero Banner */}
+      {/* 20. LIVE EVENT COMMAND CENTER HERO BANNER */}
       <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-stage-950 via-stage-900 to-stage-950 border border-stage-800/90 shadow-2xl space-y-6">
         {/* Subtle Ambient Glowing Background Orbs */}
         <div className="absolute -top-16 -left-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none animate-float-slow" />
@@ -200,36 +238,118 @@ export const EventDashboard = () => {
         </div>
       )}
 
-      {/* Main Grid: Health & Telemetry on Top / Left */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Event Health Recharts metric */}
-        <div className="lg:col-span-1 space-y-6">
-          <EventHealthCard event={event} sessions={sessions} />
+      {/* Command Center Modular Navigation Tabs */}
+      <div className="p-1.5 rounded-2xl bg-stage-900 border border-stage-800 flex flex-wrap items-center gap-1.5">
+        {[
+          { id: 'war-room', label: 'Live War Room', icon: LayoutDashboard },
+          { id: 'tasks', label: 'Task Board & Areas', icon: ListTodo },
+          { id: 'chat', label: 'Event Command Chat', icon: MessageSquare },
+          { id: 'committee', label: 'Organizer Committee', icon: Users },
+          { id: 'qa', label: 'Audience Q&A Queue', icon: HelpCircle }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
+                isActive
+                  ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/50 shadow-md shadow-cyan-500/10'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-stage-800/60 border border-transparent'
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Quick instructions for organizer */}
-          <div className="p-4 rounded-xl bg-stage-900/60 border border-stage-800 text-xs text-slate-400 space-y-2">
-            <p className="font-bold text-slate-200 uppercase tracking-wider text-[10px]">
-              Live Control Quick Guide:
-            </p>
-            <p>• Click <span className="text-amber-400 font-semibold">+ Delay</span> on any session to push it forward. All following sessions cascade automatically.</p>
-            <p>• Click <span className="text-rose-400 font-semibold">Go LIVE</span> to immediately switch the anchor's teleprompter to that speaker.</p>
-            <p>• Click <span className="text-rose-400 font-semibold">Broadcast Alert</span> to flash an urgent red notice across the stage screen.</p>
+      {/* ========================================================= */}
+      {/* TAB 1: LIVE WAR ROOM & AGENDA                             */}
+      {/* ========================================================= */}
+      {activeTab === 'war-room' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          {/* Left column: Event Health Recharts metric */}
+          <div className="lg:col-span-1 space-y-6">
+            <EventHealthCard event={event} sessions={sessions} />
+
+            {/* Quick instructions for organizer */}
+            <div className="p-4 rounded-xl bg-stage-900/60 border border-stage-800 text-xs text-slate-400 space-y-2">
+              <p className="font-bold text-slate-200 uppercase tracking-wider text-[10px]">
+                Live Control Quick Guide:
+              </p>
+              <p>• Click <span className="text-amber-400 font-semibold">+ Delay</span> on any session to push it forward. All following sessions cascade automatically.</p>
+              <p>• Click <span className="text-rose-400 font-semibold">Go LIVE</span> to immediately switch the anchor's teleprompter to that speaker.</p>
+              <p>• Click <span className="text-rose-400 font-semibold">Broadcast Alert</span> to flash an urgent red notice across the stage screen.</p>
+            </div>
+          </div>
+
+          {/* Right column: Full Agenda Manager */}
+          <div className="lg:col-span-2 space-y-6">
+            <AgendaManager
+              eventId={event._id}
+              sessions={sessions}
+              onReload={() => loadEvent(event._id)}
+              onOpenAIModal={(s) => setSelectedSessionForAI(s)}
+            />
           </div>
         </div>
+      )}
 
-        {/* Right column: Full Agenda Manager */}
-        <div className="lg:col-span-2 space-y-6">
-          <AgendaManager
+      {/* ========================================================= */}
+      {/* TAB 2: ROLE-BASED TASK BOARD & WORK AREAS                 */}
+      {/* ========================================================= */}
+      {activeTab === 'tasks' && (
+        <div className="animate-fade-in">
+          <TaskBoard
             eventId={event._id}
-            sessions={sessions}
-            onReload={() => loadEvent(event._id)}
-            onOpenAIModal={(s) => setSelectedSessionForAI(s)}
+            event={event}
+            currentUser={user}
+            socket={socket}
           />
+        </div>
+      )}
 
-          {/* Q&A Moderation Queue */}
+      {/* ========================================================= */}
+      {/* TAB 3: EVENT COMMAND CHAT                                 */}
+      {/* ========================================================= */}
+      {activeTab === 'chat' && (
+        <div className="max-w-4xl mx-auto animate-fade-in">
+          <EventCommandChat
+            eventId={event._id}
+            currentUser={user}
+            socket={socket}
+            prefillRecipient={prefillRecipient}
+          />
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB 4: ORGANIZER COMMITTEE DIRECTORY                      */}
+      {/* ========================================================= */}
+      {activeTab === 'committee' && (
+        <div className="animate-fade-in">
+          <CommitteeDirectory
+            eventId={event._id}
+            currentUser={user}
+            onSelectMemberForChat={(member) => {
+              setPrefillRecipient(member);
+              setActiveTab('chat');
+            }}
+          />
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB 5: AUDIENCE Q&A QUEUE                                 */}
+      {/* ========================================================= */}
+      {activeTab === 'qa' && (
+        <div className="animate-fade-in">
           <OrganizerQAModeration eventId={event._id} />
         </div>
-      </div>
+      )}
 
       {/* Broadcast Flash Modal */}
       <BroadcastModal

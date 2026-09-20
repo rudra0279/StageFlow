@@ -1,4 +1,48 @@
 import { registerUser, loginUser } from '../services/authService.js';
+import { InviteCode } from '../models/InviteCode.js';
+
+export const verifyInviteCode = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const invite = await InviteCode.findOne({ code: cleanCode });
+
+    if (!invite) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    }
+
+    if (invite.status === 'EXPIRED' || (invite.expiresAt && new Date(invite.expiresAt) < new Date())) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    }
+
+    if (invite.status === 'DISABLED') {
+      return res.status(400).json({ success: false, message: 'This invitation code has been disabled.' });
+    }
+
+    if (invite.status === 'EXHAUSTED' || (invite.maxUses && invite.usageCount >= invite.maxUses)) {
+      return res.status(400).json({ success: false, message: 'This invitation code has exceeded its usage limit.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Invitation code verified successfully',
+      data: {
+        valid: true,
+        code: invite.code,
+        registrationType: invite.registrationType || 'ORGANIZER',
+        role: invite.role || 'organizer',
+        roleTitle: invite.roleTitle || 'Organizer',
+        responsibility: invite.responsibility || 'Event Operations & Coordination',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const register = async (req, res, next) => {
   try {

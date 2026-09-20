@@ -28,6 +28,23 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(ROLES),
       default: ROLES.ANCHOR
     },
+    roleTitle: {
+      type: String,
+      default: 'Organizer'
+    },
+    responsibility: {
+      type: String,
+      default: 'Event Operations & Coordination'
+    },
+    contactPhone: {
+      type: String,
+      default: ''
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE'],
+      default: 'ACTIVE'
+    },
     avatarUrl: {
       type: String,
       default: ''
