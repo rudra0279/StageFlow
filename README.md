@@ -99,10 +99,6 @@ stagepilot/
 │   │   ├── routes/             # Express API routes
 │   │   ├── services/           # Cascading schedule engine & AI service
 │   │   └── sockets/            # Socket room manager & agenda handlers
-├── docs/                       # Hackathon Documentation
-│   ├── API_SPECS.md            # REST API specs
-│   ├── SOCKET_EVENTS.md        # WebSocket schemas
-│   └── DEMO_SCRIPT.md          # 3-minute hackathon demo script
 └── package.json                # Root concurrent scripts
 ```
 
