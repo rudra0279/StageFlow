@@ -134,11 +134,17 @@ async function createQuestion(req, res, next) {
       return res.status(400).json({ success: false, message: 'Question text cannot exceed 500 characters' });
     }
 
-    if (!eventId) {
+    let targetEventId = eventId;
+    if (eventId === '650000000000000000000001' || eventId === 'demo' || eventId === 'default') {
+      const fallback = (await Event.findOne({ status: 'LIVE' })) || (await Event.findOne());
+      if (fallback) targetEventId = fallback._id.toString();
+    }
+
+    if (!targetEventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    const event = await Event.findById(eventId);
+    const event = await Event.findById(targetEventId);
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
@@ -160,7 +166,7 @@ async function createQuestion(req, res, next) {
     }
 
     const newQ = await Question.create({
-      eventId,
+      eventId: targetEventId,
       sessionId: sessionId || null,
       trackId: resolvedTrack,
       track: resolvedTrack,
@@ -195,15 +201,23 @@ async function getQuestions(req, res, next) {
     const { sessionId, trackId, track, status, sortBy, sort = sortBy || 'upvotes' } = req.query;
     const targetTrack = trackId || track;
 
+    let targetEventId = eventId;
+    if (eventId === '650000000000000000000001' || eventId === 'demo' || eventId === 'default') {
+      const fallback = (await Event.findOne({ status: 'LIVE' })) || (await Event.findOne());
+      if (fallback) targetEventId = fallback._id.toString();
+    }
+
     const filter = {};
-    if (eventId) filter.eventId = eventId;
+    if (targetEventId) filter.eventId = targetEventId;
     if (sessionId) filter.sessionId = sessionId;
 
-    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '') {
+    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '' && String(targetTrack).toUpperCase() !== 'ALL') {
       if (targetTrack === 'none' || targetTrack === 'null') {
         filter.trackId = null;
       } else {
-        filter.trackId = String(targetTrack).trim();
+        const clean = String(targetTrack).trim();
+        const alt = clean.includes('_') ? clean.replace(/_/g, ' ') : clean.replace(/\s+/g, '_');
+        filter.trackId = { $in: [clean, alt] };
       }
     }
 
@@ -219,10 +233,11 @@ async function getQuestions(req, res, next) {
 
     // Post-process track filtering (handles both 'track' and 'trackId' query params)
     const resolvedTrack = resolveTrack(track, trackId);
-    if (resolvedTrack) {
+    if (resolvedTrack && String(resolvedTrack).toUpperCase() !== 'ALL') {
+      const norm = s => (s || '').toString().toLowerCase().replace(/[\s_]/g, '');
       questions = questions.filter(q => {
         const qTrack = q.track || q.trackId || null;
-        return qTrack && qTrack.toString() === resolvedTrack;
+        return qTrack && (qTrack.toString() === resolvedTrack || norm(qTrack) === norm(resolvedTrack));
       });
     }
 
@@ -253,25 +268,34 @@ async function getApprovedFeed(req, res, next) {
     const { sessionId, trackId, track } = req.query;
     const targetTrack = trackId || track;
 
+    let targetEventId = eventId;
+    if (eventId === '650000000000000000000001' || eventId === 'demo' || eventId === 'default') {
+      const fallback = (await Event.findOne({ status: 'LIVE' })) || (await Event.findOne());
+      if (fallback) targetEventId = fallback._id.toString();
+    }
+
     const filter = { status: QUESTION_STATUS.APPROVED };
-    if (eventId) filter.eventId = eventId;
+    if (targetEventId) filter.eventId = targetEventId;
     if (sessionId) filter.sessionId = sessionId;
 
-    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '') {
+    if (targetTrack !== undefined && targetTrack !== null && targetTrack !== '' && String(targetTrack).toUpperCase() !== 'ALL') {
       if (targetTrack === 'none' || targetTrack === 'null') {
         filter.trackId = null;
       } else {
-        filter.trackId = String(targetTrack).trim();
+        const clean = String(targetTrack).trim();
+        const alt = clean.includes('_') ? clean.replace(/_/g, ' ') : clean.replace(/\s+/g, '_');
+        filter.trackId = { $in: [clean, alt] };
       }
     }
 
     let questions = await Question.find(filter);
 
     const resolvedTrack = resolveTrack(track, trackId);
-    if (resolvedTrack) {
+    if (resolvedTrack && String(resolvedTrack).toUpperCase() !== 'ALL') {
+      const norm = s => (s || '').toString().toLowerCase().replace(/[\s_]/g, '');
       questions = questions.filter(q => {
         const qTrack = q.track || q.trackId || null;
-        return qTrack && qTrack.toString() === resolvedTrack;
+        return qTrack && (qTrack.toString() === resolvedTrack || norm(qTrack) === norm(resolvedTrack));
       });
     }
 
@@ -296,16 +320,23 @@ async function getAnchorFeed(req, res, next) {
     const eventId = req.params.eventId || req.query.eventId;
     const { track, trackId } = req.query;
 
+    let targetEventId = eventId;
+    if (eventId === '650000000000000000000001' || eventId === 'demo' || eventId === 'default') {
+      const fallback = (await Event.findOne({ status: 'LIVE' })) || (await Event.findOne());
+      if (fallback) targetEventId = fallback._id.toString();
+    }
+
     const filter = { status: QUESTION_STATUS.APPROVED };
-    if (eventId) filter.eventId = eventId;
+    if (targetEventId) filter.eventId = targetEventId;
 
     let questions = await Question.find(filter);
 
     const resolvedTrack = resolveTrack(track, trackId);
-    if (resolvedTrack) {
+    if (resolvedTrack && String(resolvedTrack).toUpperCase() !== 'ALL') {
+      const norm = s => (s || '').toString().toLowerCase().replace(/[\s_]/g, '');
       questions = questions.filter(q => {
         const qTrack = q.track || q.trackId || null;
-        return qTrack && qTrack.toString() === resolvedTrack;
+        return qTrack && (qTrack.toString() === resolvedTrack || norm(qTrack) === norm(resolvedTrack));
       });
     }
 
