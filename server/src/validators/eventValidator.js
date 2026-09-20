@@ -5,7 +5,8 @@ export const createEventSchema = Joi.object({
   description: Joi.string().allow('').optional(),
   date: Joi.date().iso().required(),
   venue: Joi.string().allow('').default('Main Stage'),
-  theme: Joi.string().allow('').default('Tech & Innovation')
+  theme: Joi.string().allow('').default('Tech & Innovation'),
+  workAreas: Joi.array().items(Joi.string()).optional()
 });
 
 export const updateEventSchema = Joi.object({

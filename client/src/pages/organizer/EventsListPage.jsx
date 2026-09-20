@@ -42,6 +42,7 @@ export const EventsListPage = () => {
   const [theme, setTheme] = useState('AI & Future Systems');
   const [selectedWorkAreas, setSelectedWorkAreas] = useState(DEFAULT_SELECTED_WORK_AREAS);
   const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   // Stage 5 export state per card
   const [exportingId, setExportingId] = useState(null);
@@ -92,6 +93,7 @@ export const EventsListPage = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
+    setCreateError('');
     setSubmitting(true);
     try {
       const res = await eventApi.createEvent({
@@ -102,9 +104,14 @@ export const EventsListPage = () => {
         date: new Date().toISOString()
       });
       setIsCreateModalOpen(false);
+      setTitle('');
       navigate(`/organizer/events/${res.data._id}`);
     } catch (err) {
-      console.error('Error creating event:', err);
+      const msg =
+        err.response?.data?.errors?.join(', ') ||
+        err.response?.data?.message ||
+        'Failed to create event. Please try again.';
+      setCreateError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -240,6 +247,11 @@ export const EventsListPage = () => {
         title="Create New Live Event"
       >
         <form onSubmit={handleCreate} className="space-y-4">
+          {createError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <span>⚠ {createError}</span>
+            </div>
+          )}
           <Input
             label="Event Title"
             value={title}
@@ -300,7 +312,7 @@ export const EventsListPage = () => {
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-stage-800">
-            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => { setIsCreateModalOpen(false); setCreateError(''); }}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" loading={submitting}>
