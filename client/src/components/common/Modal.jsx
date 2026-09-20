@@ -34,22 +34,23 @@ export const Modal = ({
 
       {/* Modal Container */}
       <div
-        className={`relative w-full ${maxWidth} bg-stage-900 border border-stage-700 rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150`}
+        className={`relative w-full ${maxWidth} glass-panel border border-[var(--border-subtle)] rounded-3xl shadow-2xl overflow-hidden z-10 animate-fade-in`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stage-800 bg-stage-850">
-          <h3 className="text-base font-semibold text-white tracking-wide">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+          <h3 className="text-base font-bold text-[var(--text-primary)] tracking-wide">{title}</h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-stage-800 transition-colors"
+            className="p-1.5 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-subtle)] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[80vh] overflow-y-auto">{children}</div>
+        <div className="p-6 max-h-[80vh] overflow-y-auto text-[var(--text-primary)]">{children}</div>
       </div>
+
     </div>
   );
 };

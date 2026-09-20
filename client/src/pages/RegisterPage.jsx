@@ -98,7 +98,7 @@ export const RegisterPage = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-stage-900 border border-stage-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+      <div className="max-w-md w-full glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden border border-[var(--border-subtle)]">
         {/* Glow ambient background orb */}
         <div className="absolute -top-16 -right-16 w-48 h-48 bg-gradient-to-br from-cyan-500/20 to-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -111,10 +111,10 @@ export const RegisterPage = () => {
               <UserCheck className="w-6 h-6 text-white" />
             )}
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">
+          <h2 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
             {step === 1 ? 'Authorized Access Registration' : 'Complete Your Profile'}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
             {step === 1
               ? 'Enter your event invitation or committee pass code to continue'
               : 'Your role has been verified and locked by invitation'}
@@ -125,14 +125,14 @@ export const RegisterPage = () => {
         {step === 1 && (
           <form onSubmit={handleVerifyCode} className="space-y-4">
             {codeError && (
-              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 animate-fade-in">
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2.5 animate-fade-in">
                 <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>{codeError}</span>
               </div>
             )}
 
             <div>
-              <label htmlFor="inviteCodeInput" className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+              <label htmlFor="inviteCodeInput" className="block text-xs font-mono font-bold uppercase tracking-wider text-[var(--form-label-text)] mb-1.5">
                 Invite / Entry Code
               </label>
               <input
@@ -146,9 +146,9 @@ export const RegisterPage = () => {
                 placeholder="e.g. ORG-7F29X"
                 autoFocus
                 required
-                className="w-full px-4 py-3 rounded-xl bg-stage-950 border border-stage-800 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-white font-mono text-sm tracking-wider uppercase placeholder:text-slate-600 transition-colors"
+                className="w-full px-4 py-3 rounded-xl theme-input font-mono text-sm tracking-wider uppercase focus:outline-none transition-all"
               />
-              <p className="text-[11px] text-slate-500 mt-1.5">
+              <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
                 Codes are issued by event administrators to committee members and anchors.
               </p>
             </div>
@@ -164,8 +164,8 @@ export const RegisterPage = () => {
               Verify Code
             </Button>
 
-            <div className="pt-4 border-t border-stage-800/80 text-center">
-              <p className="text-xs text-slate-400">
+            <div className="pt-4 border-t border-[var(--border-subtle)] text-center">
+              <p className="text-xs text-[var(--text-secondary)]">
                 Already registered?{' '}
                 <Link to="/login" className="text-cyan-400 font-semibold hover:underline">
                   Sign In
@@ -179,7 +179,7 @@ export const RegisterPage = () => {
         {step === 2 && codeData && (
           <form onSubmit={handleCompleteRegistration} className="space-y-4">
             {registrationError && (
-              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 animate-fade-in">
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2.5 animate-fade-in">
                 <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>{registrationError}</span>
               </div>
@@ -195,7 +195,7 @@ export const RegisterPage = () => {
                 <button
                   type="button"
                   onClick={handleResetCode}
-                  className="text-[11px] text-slate-400 hover:text-cyan-300 flex items-center gap-1 font-medium transition-colors"
+                  className="text-[11px] text-[var(--text-secondary)] hover:text-cyan-400 flex items-center gap-1 font-medium transition-colors"
                   title="Change code"
                 >
                   <RefreshCw className="w-3 h-3" />
@@ -205,15 +205,15 @@ export const RegisterPage = () => {
 
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-cyan-500/20 text-xs">
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Registration Type</span>
-                  <span className="font-bold text-white uppercase tracking-wider">
+                  <span className="text-[10px] font-mono uppercase text-[var(--text-muted)] block">Registration Type</span>
+                  <span className="font-bold text-[var(--text-primary)] uppercase tracking-wider">
                     {codeData.registrationType}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Assigned Role</span>
-                  <div className="flex items-center gap-1 font-bold text-cyan-300">
+                  <span className="text-[10px] font-mono uppercase text-[var(--text-muted)] block">Assigned Role</span>
+                  <div className="flex items-center gap-1 font-bold text-cyan-400">
                     <Lock className="w-3 h-3 text-cyan-400" />
                     <span>{codeData.roleTitle}</span>
                   </div>
@@ -222,8 +222,8 @@ export const RegisterPage = () => {
 
               {codeData.responsibility && (
                 <div className="pt-2 border-t border-cyan-500/20 text-xs">
-                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Assigned Responsibilities</span>
-                  <span className="text-slate-300 font-medium">{codeData.responsibility}</span>
+                  <span className="text-[10px] font-mono uppercase text-[var(--text-muted)] block">Assigned Responsibilities</span>
+                  <span className="text-[var(--text-secondary)] font-medium">{codeData.responsibility}</span>
                 </div>
               )}
             </div>
@@ -264,7 +264,7 @@ export const RegisterPage = () => {
             />
 
             {/* Read-Only Locked Role Notice */}
-            <div className="p-3 rounded-xl bg-stage-950 border border-stage-800 text-[11px] text-slate-400 flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-secondary)] flex items-center gap-2">
               <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span>Role configuration is automatically determined by your entry code and locked.</span>
             </div>
@@ -284,3 +284,4 @@ export const RegisterPage = () => {
     </div>
   );
 };
+

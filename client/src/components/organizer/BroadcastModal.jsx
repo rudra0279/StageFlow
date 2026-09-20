@@ -40,14 +40,14 @@ export const BroadcastModal = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Broadcast Urgent Stage Alert">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--form-label-text)] mb-1.5">
             Alert Message (Flashes on Anchor Screen)
           </label>
           <textarea
             rows={3}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="w-full bg-stage-950 border border-stage-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-400"
+            className="w-full theme-input rounded-xl p-3 text-sm focus:outline-none"
             placeholder="Type urgent directive to anchor..."
             required
           />
@@ -55,14 +55,14 @@ export const BroadcastModal = ({
 
         {/* Quick clicks */}
         <div>
-          <p className="text-[11px] text-slate-400 mb-2 font-medium">Quick stage directions:</p>
+          <p className="text-[11px] text-[var(--text-secondary)] mb-2 font-medium">Quick stage directions:</p>
           <div className="flex flex-wrap gap-1.5">
             {quickPrompts.map((prompt) => (
               <button
                 key={prompt}
                 type="button"
                 onClick={() => setMessage(prompt)}
-                className="text-xs bg-stage-800 hover:bg-stage-700 text-slate-300 px-2.5 py-1 rounded border border-stage-750 transition-colors"
+                className="text-xs bg-[var(--bg-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-secondary)] px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] transition-colors"
               >
                 {prompt}
               </button>
@@ -72,13 +72,13 @@ export const BroadcastModal = ({
 
         <div className="grid grid-cols-2 gap-3 pt-2">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--form-label-text)] mb-1.5">
               Urgency Level
             </label>
             <select
               value={urgency}
               onChange={(e) => setUrgency(e.target.value)}
-              className="w-full bg-stage-950 border border-stage-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+              className="w-full theme-input rounded-xl px-3 py-2 text-sm focus:outline-none"
             >
               <option value="LOW">Low (Informational)</option>
               <option value="MEDIUM">Medium (Caution)</option>
@@ -87,13 +87,13 @@ export const BroadcastModal = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--form-label-text)] mb-1.5">
               Category
             </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full bg-stage-950 border border-stage-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+              className="w-full theme-input rounded-xl px-3 py-2 text-sm focus:outline-none"
             >
               <option value="STAGE_DIRECTION">Stage Direction</option>
               <option value="DELAY">Delay Notice</option>
@@ -102,6 +102,7 @@ export const BroadcastModal = ({
             </select>
           </div>
         </div>
+
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-stage-800">
           <Button variant="secondary" onClick={onClose} disabled={loading}>

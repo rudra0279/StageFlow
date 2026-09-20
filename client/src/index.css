@@ -2,49 +2,166 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default Light Mode Tokens - Clean, High Readability Premium SaaS */
+  --bg-primary: #f8fafc;
+  --bg-surface: rgba(255, 255, 255, 0.94);
+  --bg-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --border-subtle: rgba(226, 232, 240, 0.9);
+  --border-highlight: rgba(2, 132, 199, 0.4);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent-cyan: #0284c7;
+  --accent-indigo: #4f46e5;
+  --accent-purple: #9333ea;
+  --live-emerald: #059669;
+  --warning-amber: #d97706;
+  --danger-rose: #e11d48;
+  --ai-accent: #8b5cf6;
+  --shadow-color: rgba(15, 23, 42, 0.08);
+  --stage-grid-color: rgba(2, 132, 199, 0.04);
+
+  /* Form & Input Theme Tokens - Light Mode */
+  --input-bg: #ffffff;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+  --input-border: #cbd5e1;
+  --input-focus-border: #0284c7;
+  --input-focus-ring: rgba(2, 132, 199, 0.2);
+  --form-card-bg: rgba(255, 255, 255, 0.94);
+  --form-label-text: #334155;
+}
+
+html.dark {
+  /* Dark Mode Tokens - Cinematic Control Room Atmosphere */
+  --bg-primary: #04060c;
+  --bg-surface: rgba(10, 14, 28, 0.92);
+  --bg-elevated: rgba(18, 24, 46, 0.94);
+  --bg-glass: rgba(10, 13, 26, 0.85);
+  --border-subtle: rgba(34, 43, 76, 0.8);
+  --border-highlight: rgba(6, 182, 212, 0.45);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-cyan: #06b6d4;
+  --accent-indigo: #6366f1;
+  --accent-purple: #a855f7;
+  --live-emerald: #10b981;
+  --warning-amber: #f59e0b;
+  --danger-rose: #f43f5e;
+  --ai-accent: #a855f7;
+  --shadow-color: rgba(0, 0, 0, 0.6);
+  --stage-grid-color: rgba(6, 182, 212, 0.05);
+
+  /* Form & Input Theme Tokens - Dark Mode */
+  --input-bg: rgba(10, 13, 26, 0.9);
+  --input-text: #f8fafc;
+  --input-placeholder: #64748b;
+  --input-border: rgba(34, 43, 76, 0.9);
+  --input-focus-border: #06b6d4;
+  --input-focus-ring: rgba(6, 182, 212, 0.25);
+  --form-card-bg: rgba(10, 14, 28, 0.92);
+  --form-label-text: #cbd5e1;
+}
+
+
 @layer base {
+  html, body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
   body {
-    background-color: #04060c;
-    color: #f1f5f9;
-    font-family: 'Inter', system-ui, sans-serif;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(244, 63, 94, 0.05) 0px, transparent 50%);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-attachment: fixed;
+  }
+
+  html.dark body {
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(244, 63, 94, 0.07) 0px, transparent 50%);
+  }
+
+  html.light body {
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.06) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(147, 51, 234, 0.06) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(225, 29, 72, 0.04) 0px, transparent 50%);
   }
 }
 
-/* Custom Teleprompter typography */
+/* Theme-Aware Form & Input Utilities */
+.theme-input {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border-color: var(--input-border) !important;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.theme-input::placeholder {
+  color: var(--input-placeholder) !important;
+}
+
+.theme-input:focus {
+  border-color: var(--input-focus-border) !important;
+  box-shadow: 0 0 0 3px var(--input-focus-ring) !important;
+}
+
+/* Browser Autofill Theme Fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--input-text) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Custom Teleprompter Typography */
 .teleprompter-text {
   font-family: 'Outfit', 'Inter', sans-serif;
   line-height: 1.6;
   letter-spacing: -0.01em;
 }
 
-/* Glassmorphism & Command Center Panel Styling */
+
+/* Glassmorphism Utilities */
 .glass-panel {
-  background: rgba(10, 13, 26, 0.85);
+  background: var(--bg-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(34, 43, 76, 0.8);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px -2px var(--shadow-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .glass-panel-interactive {
-  background: rgba(10, 13, 26, 0.85);
+  background: var(--bg-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(34, 43, 76, 0.8);
+  border: 1px solid var(--border-subtle);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel-interactive:hover {
-  border-color: rgba(6, 182, 212, 0.4);
-  box-shadow: 0 10px 30px -10px rgba(6, 182, 212, 0.15);
+  border-color: var(--border-highlight);
+  box-shadow: 0 10px 30px -10px var(--shadow-color);
   transform: translateY(-2px);
 }
 
-/* Subtle glowing borders */
+/* Stage Lighting Grid Background */
+.stage-grid-bg {
+  background-size: 32px 32px;
+  background-image: linear-gradient(to right, var(--stage-grid-color) 1px, transparent 1px),
+                    linear-gradient(to bottom, var(--stage-grid-color) 1px, transparent 1px);
+}
+
+/* Glow Border Utilities */
 .glow-border-cyan {
   box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35);
 }
@@ -57,31 +174,74 @@
   box-shadow: 0 0 20px -3px rgba(139, 92, 246, 0.35);
 }
 
-/* Custom scrollbars */
+.glow-border-emerald {
+  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-::-webkit-scrollbar-track {
+html.dark ::-webkit-scrollbar-track {
   background: #05070e;
 }
-::-webkit-scrollbar-thumb {
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.dark ::-webkit-scrollbar-thumb {
   background: #1e2746;
   border-radius: 9999px;
 }
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #344373;
+  background: #0284c7;
 }
 
-/* Animation Keyframes */
+/* Timeline Vertical Connector */
+.timeline-line {
+  position: absolute;
+  left: 27px;
+  top: 48px;
+  bottom: -16px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.4) 0%, rgba(34, 43, 76, 0.4) 100%);
+}
+
+/* Multilayer Background Animations */
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.08); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes particleRise {
+  0% { transform: translateY(0px) scale(0.8); opacity: 0.1; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(-140px) scale(1.2); opacity: 0; }
+}
+
+@keyframes lightBeamSweep {
+  0%, 100% { transform: rotate(-15deg) translateY(0); opacity: 0.15; }
+  50% { transform: rotate(15deg) translateY(-20px); opacity: 0.35; }
+}
+
+@keyframes lightTrailFlow {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
 @keyframes alertPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.85; transform: scale(1.015); }
 }
 
 @keyframes liveDotGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
-  50% { box-shadow: 0 0 0 8px rgba(244, 63, 94, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
 }
 
 @keyframes floatSlow {
@@ -98,6 +258,23 @@
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+@keyframes waveformAnim {
+  0%, 100% { height: 20%; }
+  50% { height: 95%; }
+}
+
+.animate-blob-slow {
+  animation: blobFloat 14s ease-in-out infinite;
+}
+
+.animate-particle-rise {
+  animation: particleRise 6s ease-in-out infinite;
+}
+
+.animate-light-beam {
+  animation: lightBeamSweep 10s ease-in-out infinite;
 }
 
 .animate-alert {
@@ -121,22 +298,60 @@
   animation: gradientShift 8s ease infinite;
 }
 
-/* Timeline Vertical Connector */
-.timeline-line {
-  position: absolute;
-  left: 27px;
-  top: 48px;
-  bottom: -16px;
-  width: 2px;
-  background: linear-gradient(180deg, rgba(6, 182, 212, 0.4) 0%, rgba(34, 43, 76, 0.4) 100%);
+.animate-wave-bar {
+  animation: waveformAnim 1.2s ease-in-out infinite alternate;
+}
+
+/* Stage Light Beam Rotation & Sweeps */
+@keyframes beamRotateLeft {
+  0%, 100% { transform: rotate(-25deg) scale(1); opacity: 0.2; }
+  50% { transform: rotate(-5deg) scale(1.1); opacity: 0.45; }
+}
+
+@keyframes beamRotateRight {
+  0%, 100% { transform: rotate(25deg) scale(1); opacity: 0.2; }
+  50% { transform: rotate(5deg) scale(1.1); opacity: 0.45; }
+}
+
+@keyframes lightSweepAnim {
+  0% { transform: translateX(-100%) rotate(12deg); opacity: 0; }
+  20% { opacity: 0.4; }
+  80% { opacity: 0.4; }
+  100% { transform: translateX(200%) rotate(12deg); opacity: 0; }
+}
+
+@keyframes nodePulseAnim {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 15px currentColor; }
+}
+
+.animate-beam-left {
+  animation: beamRotateLeft 12s ease-in-out infinite;
+}
+
+.animate-beam-right {
+  animation: beamRotateRight 14s ease-in-out infinite;
+}
+
+.animate-light-sweep {
+  animation: lightSweepAnim 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-node-pulse {
+  animation: nodePulseAnim 3s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .animate-blob-slow,
+  .animate-particle-rise,
+  .animate-light-beam,
   .animate-alert,
   .animate-live-dot,
   .animate-float-slow,
   .animate-fade-in,
-  .animate-gradient-bg {
+  .animate-gradient-bg,
+  .animate-wave-bar {
     animation: none !important;
+    transition: none !important;
   }
 }

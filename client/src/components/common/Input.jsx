@@ -15,7 +15,7 @@ export const Input = ({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5"
+          className="block text-xs font-semibold uppercase tracking-wider text-[var(--form-label-text)] mb-1.5"
         >
           {label}
         </label>
@@ -23,12 +23,13 @@ export const Input = ({
       <input
         id={inputId}
         type={type}
-        className={`w-full bg-stage-900 border ${
-          error ? 'border-rose-500 focus:ring-rose-500' : 'border-stage-700 focus:border-cyan-500 focus:ring-cyan-500'
-        } rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${className}`}
+        className={`w-full theme-input rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none transition-all ${
+          error ? '!border-rose-500 !focus:ring-rose-500' : ''
+        } ${className}`}
         {...props}
       />
-      {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-rose-400 font-semibold">{error}</p>}
     </div>
   );
 };
+
