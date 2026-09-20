@@ -16,7 +16,6 @@ async function createEvent(req, res, next) {
       });
     }
 
-<<<<<<< Updated upstream
     const { getDefaultWorkTypes } = require('../constants/workTypes');
     const { ORGANIZER_WORK_ROLES } = require('../constants/organizerRoles');
 
@@ -34,13 +33,12 @@ async function createEvent(req, res, next) {
         isActive: true,
       },
     ] : [];
-=======
+
     const eventDate = new Date(date);
     const eventStartTime = startTime ? new Date(startTime) : eventDate;
     const eventEndTime = endTime ? new Date(endTime) : new Date(eventDate.getTime() + 8 * 3600000);
 
     const defaultWorkAreas = ['Stage Management', 'Speaker Management', 'Registration', 'Technical / AV', 'Logistics'];
->>>>>>> Stashed changes
 
     const event = await Event.create({
       name: eventName,
@@ -184,45 +182,20 @@ async function getRunOfShow(req, res, next) {
       });
     }
 
-    const jwt = require('jsonwebtoken');
-    const env = require('../config/env');
-    const User = require('../models/User');
-
-    let user = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, env.JWT_SECRET);
-        user = await User.findById(decoded.id).select('-password');
-      } catch (err) {
-        return res.status(401).json({ success: false, message: 'Invalid or expired authentication token.' });
-      }
-    }
-
-    // Check if public demo event
-    const isPublicDemo = event.theme === 'Autonomous Systems & PDF Export' || (event.name && event.name.includes('Stage 5'));
-
-    if (!user && !isPublicDemo) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required. No token provided.',
-      });
-    }
-
-    if (user) {
-      const userRole = (user.role || '').toLowerCase();
+    // Authorization & Ownership Verification
+    if (req.user) {
+      const userRole = (req.user.role || '').toLowerCase();
       if (userRole !== 'organizer' && userRole !== 'admin') {
         return res.status(403).json({
           success: false,
-          message: 'Forbidden: Requires organizer or admin role',
+          message: 'Forbidden: Insufficient permissions to export run-of-show',
         });
       }
 
-      if (userRole === 'organizer' && event.organizerId) {
-        const orgIdStr = event.organizerId._id ? event.organizerId._id.toString() : event.organizerId.toString();
-        const userIdStr = user._id.toString();
-        if (orgIdStr !== userIdStr) {
+      if (userRole === 'organizer') {
+        const orgId = event.organizerId ? (event.organizerId._id || event.organizerId).toString() : null;
+        const userId = (req.user._id || req.user.id || '').toString();
+        if (orgId && userId && orgId !== userId) {
           return res.status(403).json({
             success: false,
             message: 'Forbidden: You do not have permission to export this event',
@@ -231,10 +204,8 @@ async function getRunOfShow(req, res, next) {
       }
     }
 
-    // Check if client explicitly requests PDF format or if it's public demo
-    const wantsPdf = req.query.format === 'pdf' || (isPublicDemo && !req.headers.authorization);
-
-    if (wantsPdf) {
+    // PDF Export Generation if explicitly format=pdf
+    if (req.query.format === 'pdf') {
       const { generatePdfBuffer } = require('../utils/pdfGenerator');
       const state = await getEventState(id);
 
@@ -281,7 +252,7 @@ async function getRunOfShow(req, res, next) {
       return res.send(pdfBuffer);
     }
 
-    // Default for authenticated calls: return JSON data contract
+    // Default JSON Data Contract Output
     const runOfShow = await getRunOfShowData(id);
     if (!runOfShow) {
       return res.status(404).json({

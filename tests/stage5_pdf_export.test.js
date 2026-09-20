@@ -81,7 +81,8 @@ describe('Stage 5: Run-of-Show PDF Exporter API & Contract', () => {
 
   test('1. GET /api/events/:id/run-of-show returns 200 and application/pdf content type', async () => {
     const res = await request(app)
-      .get(`/api/events/${eventId}/run-of-show`)
+      .get(`/api/events/${eventId}/run-of-show?format=pdf`)
+      .set('Authorization', `Bearer ${organizerToken}`)
       .expect(200);
 
     expect(res.headers['content-type']).toMatch(/application\/pdf/);
@@ -94,7 +95,8 @@ describe('Stage 5: Run-of-Show PDF Exporter API & Contract', () => {
 
   test('2. PDF output contains multi-track details (Track A, B, C)', async () => {
     const res = await request(app)
-      .get(`/api/events/${eventId}/run-of-show`)
+      .get(`/api/events/${eventId}/run-of-show?format=pdf`)
+      .set('Authorization', `Bearer ${organizerToken}`)
       .expect(200);
 
     const pdfContent = Buffer.isBuffer(res.body) ? res.body.toString('utf8') : res.text;
@@ -108,7 +110,8 @@ describe('Stage 5: Run-of-Show PDF Exporter API & Contract', () => {
   test('3. Returns 404 for invalid event ID', async () => {
     const fakeId = '507f1f77bcf86cd799439011';
     const res = await request(app)
-      .get(`/api/events/${fakeId}/run-of-show`)
+      .get(`/api/events/${fakeId}/run-of-show?format=pdf`)
+      .set('Authorization', `Bearer ${organizerToken}`)
       .expect(404);
 
     expect(res.body.success).toBe(false);

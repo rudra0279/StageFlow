@@ -145,7 +145,7 @@ export const getRunOfShow = async (req, res, next) => {
       });
     }
 
-    const isJson = req.query.format === 'json' || (req.headers.accept && req.headers.accept.includes('application/json') && !req.headers.accept.includes('application/pdf'));
+    const isJson = req.query.format === 'json';
 
     if (isJson) {
       const runOfShow = await getRunOfShowData(id);
