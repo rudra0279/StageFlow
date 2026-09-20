@@ -15,6 +15,24 @@ async function createEvent(req, res, next) {
       });
     }
 
+    const { getDefaultWorkTypes } = require('../constants/workTypes');
+    const { ORGANIZER_WORK_ROLES } = require('../constants/organizerRoles');
+
+    const configuredWorkTypes = req.body.workTypes || getDefaultWorkTypes();
+    const creatorId = req.user ? (req.user._id || req.user.id) : null;
+    const initialCommittee = creatorId ? [
+      {
+        userId: creatorId,
+        name: req.user ? req.user.name : 'Event Organizer',
+        email: req.user ? req.user.email : 'organizer@event.io',
+        role: 'organizer',
+        workRole: ORGANIZER_WORK_ROLES.EVENT_LEAD,
+        assignedResponsibilities: ['Overall Event Direction', 'Schedule Authority'],
+        joinedAt: new Date().toISOString(),
+        isActive: true,
+      },
+    ] : [];
+
     const event = await Event.create({
       name,
       description,
@@ -27,6 +45,8 @@ async function createEvent(req, res, next) {
       status: 'UPCOMING',
       eventHealth: 'ON_TRACK',
       delayTotalMinutes: 0,
+      workTypes: configuredWorkTypes,
+      committee: initialCommittee,
     });
 
     logger.event(`Event created: "${event.name}" (id: ${event._id})`);
@@ -186,6 +206,57 @@ async function getRunOfShow(req, res, next) {
   }
 }
 
+async function getAvailableWorkTypes(req, res) {
+  const { AVAILABLE_WORK_TYPES } = require('../constants/workTypes');
+  res.status(200).json({
+    success: true,
+    data: AVAILABLE_WORK_TYPES,
+  });
+}
+
+async function getEventWorkTypes(req, res, next) {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+    const { getDefaultWorkTypes } = require('../constants/workTypes');
+    const workTypes = (event.workTypes && event.workTypes.length > 0) ? event.workTypes : getDefaultWorkTypes();
+    res.status(200).json({
+      success: true,
+      data: workTypes,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateEventWorkTypes(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { workTypes } = req.body;
+    if (!Array.isArray(workTypes)) {
+      return res.status(400).json({ success: false, message: 'workTypes array is required' });
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    event.workTypes = workTypes;
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Event work types updated successfully',
+      data: event.workTypes,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createEvent,
   getEvents,
@@ -194,4 +265,7 @@ module.exports = {
   deleteEvent,
   getLiveState,
   getRunOfShow,
+  getAvailableWorkTypes,
+  getEventWorkTypes,
+  updateEventWorkTypes,
 };

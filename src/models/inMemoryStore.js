@@ -13,6 +13,9 @@ const collections = {
   Agenda: [],
   Announcement: [],
   Question: [],
+  InviteCode: [],
+  Task: [],
+  ChatMessage: [],
 };
 
 function matchesFilter(item, filter = {}) {
@@ -96,6 +99,37 @@ function createDocInstance(modelName, data) {
     if (!instance.trackId && instance.track) instance.trackId = instance.track;
   }
 
+  if (modelName === 'Event') {
+    if (!instance.workTypes) {
+      try {
+        const { getDefaultWorkTypes } = require('../constants/workTypes');
+        instance.workTypes = getDefaultWorkTypes();
+      } catch (e) {
+        instance.workTypes = [];
+      }
+    }
+    if (!instance.committee) {
+      instance.committee = [];
+    }
+  }
+
+  if (modelName === 'InviteCode') {
+    if (instance.currentUses === undefined) instance.currentUses = 0;
+    if (instance.maxUses === undefined) instance.maxUses = 1;
+    if (instance.isActive === undefined) instance.isActive = true;
+  }
+
+  if (modelName === 'Task') {
+    if (!instance.status) instance.status = 'TODO';
+    if (!instance.priority) instance.priority = 'MEDIUM';
+  }
+
+  if (modelName === 'ChatMessage') {
+    if (instance.isEdited === undefined) instance.isEdited = false;
+    if (instance.isDeleted === undefined) instance.isDeleted = false;
+    if (!instance.timestamp) instance.timestamp = new Date().toISOString();
+  }
+
   return instance;
 }
 
@@ -123,6 +157,16 @@ class MemoryQuery {
     return this;
   }
 
+  limit(limitNum) {
+    this.limitNum = limitNum;
+    return this;
+  }
+
+  skip(skipNum) {
+    this.skipNum = skipNum;
+    return this;
+  }
+
   async exec() {
     let result = await this.executor();
     if (Array.isArray(result)) {
@@ -136,6 +180,13 @@ class MemoryQuery {
           }
           return 0;
         });
+      }
+
+      if (this.skipNum) {
+        result = result.slice(this.skipNum);
+      }
+      if (this.limitNum !== undefined && this.limitNum !== null) {
+        result = result.slice(0, this.limitNum);
       }
 
       for (const p of this.populates) {
@@ -284,6 +335,9 @@ const MemorySpeaker = createMemoryModel('Speaker');
 const MemoryAgenda = createMemoryModel('Agenda');
 const MemoryAnnouncement = createMemoryModel('Announcement');
 const MemoryQuestion = createMemoryModel('Question');
+const MemoryInviteCode = createMemoryModel('InviteCode');
+const MemoryTask = createMemoryModel('Task');
+const MemoryChatMessage = createMemoryModel('ChatMessage');
 
 function clearAllMemoryCollections() {
   for (const key in collections) {
@@ -298,6 +352,9 @@ module.exports = {
   MemoryAgenda,
   MemoryAnnouncement,
   MemoryQuestion,
+  MemoryInviteCode,
+  MemoryTask,
+  MemoryChatMessage,
   clearAllMemoryCollections,
   collections,
 };

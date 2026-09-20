@@ -33,6 +33,7 @@ function initSocket(server) {
         socket.join(`event_${eventId}:organizers`);
         socket.join(`event_${eventId}_organizers`);
         socket.join(`event:${eventId}:organizers`);
+        socket.join(`event:${eventId}:organizer-chat`);
       } else if (normalizedRole === 'ANCHOR') {
         socket.join(`${room}:anchors`);
         socket.join(`event_${eventId}:anchors`);

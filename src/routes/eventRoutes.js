@@ -9,6 +9,9 @@ const agendaRoutes = require('./agendaRoutes');
 const sessionRoutes = require('./sessionRoutes');
 const announcementRoutes = require('./announcementRoutes');
 const questionRoutes = require('./questionRoutes');
+const committeeRoutes = require('./committeeRoutes');
+const taskRoutes = require('./taskRoutes');
+const chatRoutes = require('./chatRoutes');
 
 // Nested subroutes for an event
 router.use('/:eventId/speakers', speakerRoutes);
@@ -16,6 +19,12 @@ router.use('/:eventId/agenda', agendaRoutes);
 router.use('/:eventId/sessions', sessionRoutes);
 router.use('/:eventId/announcements', announcementRoutes);
 router.use('/:eventId/questions', questionRoutes);
+router.use('/:eventId/committee', committeeRoutes);
+router.use('/:eventId/tasks', taskRoutes);
+router.use('/:eventId/chat', chatRoutes);
+
+// Available work types (static catalog)
+router.get('/work-types/available', eventController.getAvailableWorkTypes);
 
 // Event CRUD
 router.route('/')
@@ -28,6 +37,15 @@ router.route('/:id')
   .delete(authenticate, eventController.deleteEvent);
 
 router.get('/:id/live-state', eventController.getLiveState);
+
+// Event Work Types configuration
+router.get('/:id/work-types', eventController.getEventWorkTypes);
+router.put(
+  '/:id/work-types',
+  authenticate,
+  requireRole('organizer', 'ORGANIZER', 'admin', 'ADMIN'),
+  eventController.updateEventWorkTypes
+);
 
 // Run-of-Show PDF Exporter Data Endpoints (Stage 5)
 router.get(

@@ -60,6 +60,21 @@ const EventSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    workTypes: {
+      type: Array,
+      default: () => {
+        try {
+          const { getDefaultWorkTypes } = require('../constants/workTypes');
+          return getDefaultWorkTypes();
+        } catch (e) {
+          return [];
+        }
+      },
+    },
+    committee: {
+      type: Array,
+      default: [],
+    },
   },
   { timestamps: true }
 );

@@ -1,6 +1,6 @@
 // src/socket/socketEmitter.js
 const { getIO } = require('./socketServer');
-const { SERVER_EVENTS, getEventRoom } = require('./socketEvents');
+const { SERVER_EVENTS, getEventRoom, getOrganizerChatRoom } = require('./socketEvents');
 const { logger } = require('../utils/logger');
 
 function emitToEventRoom(eventId, eventName, payload) {
@@ -11,6 +11,16 @@ function emitToEventRoom(eventId, eventName, payload) {
     logger.socket(`Broadcasted [${eventName}] to room [${room}]`, payload);
   } catch (error) {
     logger.error('[SOCKET]', `Failed to emit ${eventName} to event ${eventId}`, error);
+  }
+}
+
+function emitToRoom(room, eventName, payload) {
+  try {
+    const io = getIO();
+    io.to(room).emit(eventName, payload);
+    logger.socket(`Broadcasted [${eventName}] to room [${room}]`, payload);
+  } catch (error) {
+    logger.error('[SOCKET]', `Failed to emit ${eventName} to room ${room}`, error);
   }
 }
 
@@ -75,6 +85,60 @@ const socketEmitter = {
     emitToEventRoom(eventId, SERVER_EVENTS.EVENT_STATE_CHANGED, {
       eventId,
       ...statePayload,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
+  emitTaskCreated: (eventId, task) => {
+    emitToEventRoom(eventId, SERVER_EVENTS.TASK_CREATED, {
+      eventId,
+      task,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
+  emitTaskAssigned: (eventId, task) => {
+    emitToEventRoom(eventId, SERVER_EVENTS.TASK_ASSIGNED, {
+      eventId,
+      task,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
+  emitTaskUpdated: (eventId, task) => {
+    emitToEventRoom(eventId, SERVER_EVENTS.TASK_UPDATED, {
+      eventId,
+      task,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
+  emitTaskCompleted: (eventId, task) => {
+    emitToEventRoom(eventId, SERVER_EVENTS.TASK_COMPLETED, {
+      eventId,
+      task,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
+  emitTaskDeleted: (eventId, payload) => {
+    emitToEventRoom(eventId, SERVER_EVENTS.TASK_DELETED, {
+      eventId,
+      ...payload,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
+  emitOrganizerChatMessage: (eventId, chatMessage) => {
+    const chatRoom = getOrganizerChatRoom(eventId);
+    emitToRoom(chatRoom, SERVER_EVENTS.ORGANIZER_CHAT_MESSAGE, {
+      eventId,
+      message: chatMessage,
+      timestamp: new Date().toISOString(),
+    });
+    emitToRoom(chatRoom, SERVER_EVENTS.CHAT_MESSAGE, {
+      eventId,
+      message: chatMessage,
       timestamp: new Date().toISOString(),
     });
   },
