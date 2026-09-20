@@ -19,6 +19,7 @@ import { createEventSchema, updateEventSchema } from '../validators/eventValidat
 import { broadcastAlertSchema } from '../validators/sessionValidator.js';
 import { ROLES } from '../constants/roles.js';
 import * as orgOps from '../controllers/organizerOperationsController.js';
+import { broadcastLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = express.Router();
 
@@ -50,6 +51,7 @@ router.post(
   '/:id/broadcast',
   protect,
   authorize(ROLES.ORGANIZER),
+  broadcastLimiter,
   validate(broadcastAlertSchema),
   broadcastAnnouncement
 );
@@ -69,23 +71,23 @@ router.get(
   getRunOfShow
 );
 
-// Organizer Committee Directory
-router.get('/:id/committee', orgOps.getCommittee);
+// Organizer Committee Directory (Protected; masks phone/email for non-organizers)
+router.get('/:id/committee', protect, orgOps.getCommittee);
 
-// Task Management
+// Task Management (Organizer only)
 router.route('/:id/tasks')
-  .get(orgOps.getTasks)
-  .post(orgOps.createTask);
+  .get(protect, authorize(ROLES.ORGANIZER), orgOps.getTasks)
+  .post(protect, authorize(ROLES.ORGANIZER), orgOps.createTask);
 
-router.post('/:id/tasks/batch', orgOps.batchCreateTasks);
+router.post('/:id/tasks/batch', protect, authorize(ROLES.ORGANIZER), orgOps.batchCreateTasks);
 
 router.route('/:id/tasks/:taskId')
-  .patch(orgOps.updateTask)
-  .delete(orgOps.deleteTask);
+  .patch(protect, authorize(ROLES.ORGANIZER), orgOps.updateTask)
+  .delete(protect, authorize(ROLES.ORGANIZER), orgOps.deleteTask);
 
-// Organizer Command Chat
+// Organizer Command Chat (Organizer only)
 router.route('/:id/messages')
-  .get(orgOps.getMessages)
-  .post(orgOps.sendMessage);
+  .get(protect, authorize(ROLES.ORGANIZER), orgOps.getMessages)
+  .post(protect, authorize(ROLES.ORGANIZER), orgOps.sendMessage);
 
 export default router;

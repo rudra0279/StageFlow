@@ -1,8 +1,50 @@
 import express from 'express';
-import { generateScript, copilotQuery, teleprompterAssist, handleQuestionAssist, handleQuestionAssist as questionAssist } from '../controllers/aiController.js';
+import {
+  generateScript,
+  copilotQuery,
+  teleprompterAssist,
+  handleQuestionAssist
+} from '../controllers/aiController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { authorize } from '../middleware/roleMiddleware.js';
+import { aiLimiter } from '../middleware/rateLimitMiddleware.js';
+import { ROLES } from '../constants/roles.js';
 
 const router = express.Router();
+
+/**
+ * AI Security Authentication:
+ * Enforces token verification when credentials are provided.
+ * Enforces authentication in production to prevent external API quota abuse.
+ */
+const aiAuth = (req, res, next) => {
+  if (req.headers.authorization) {
+    return protect(req, res, () => {
+      return authorize(ROLES.ORGANIZER, ROLES.ANCHOR, 'organizer', 'anchor')(req, res, next);
+    });
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access AI endpoints. Token is missing.'
+    });
+  }
+  next();
+};
+
+/**
+ * Validate input size for AI prompts and queries to prevent prompt bloat / resource exhaustion
+ */
+const validateAiInput = (req, res, next) => {
+  const inputStr = req.body?.prompt || req.body?.query || req.body?.message || '';
+  if (typeof inputStr === 'string' && inputStr.length > 2000) {
+    return res.status(400).json({
+      success: false,
+      message: 'AI prompt is too large. Maximum allowed size is 2000 characters.'
+    });
+  }
+  next();
+};
 
 // Helper to route specific script types to generateScript
 const routeToScript = (scriptType) => (req, res, next) => {
@@ -36,29 +78,28 @@ router.get('/', (req, res) => {
 });
 
 // Stage 4: AI Question Assist
-router.post('/question-assist', handleQuestionAssist);
+router.post('/question-assist', aiAuth, aiLimiter, validateAiInput, handleQuestionAssist);
 
 // Primary script generation endpoints
-router.post('/generate-script', generateScript);
-router.post('/generate', generateScript);
+router.post('/generate-script', aiAuth, aiLimiter, validateAiInput, generateScript);
+router.post('/generate', aiAuth, aiLimiter, validateAiInput, generateScript);
 
 // Copilot and AI assistant query endpoints
-router.post('/copilot-query', copilotQuery);
-router.post('/query', copilotQuery);
-router.post('/assistant', copilotQuery);
+router.post('/copilot-query', aiAuth, aiLimiter, validateAiInput, copilotQuery);
+router.post('/query', aiAuth, aiLimiter, validateAiInput, copilotQuery);
+router.post('/assistant', aiAuth, aiLimiter, validateAiInput, copilotQuery);
 
 // Intelligent Teleprompter assistance
-router.post('/teleprompter-assist', teleprompterAssist);
+router.post('/teleprompter-assist', aiAuth, aiLimiter, validateAiInput, teleprompterAssist);
 
 // Granular script generation endpoints
-router.post('/opening', routeToScript('opening'));
-router.post('/introduction', routeToScript('introduction'));
-router.post('/transition', routeToScript('transition'));
-router.post('/closing', routeToScript('closing'));
-router.post('/filler', routeToScript('filler'));
-router.post('/emergency', routeToScript('emergency'));
-router.post('/delay', routeToScript('delay'));
-router.post('/announcement', routeToScript('announcement'));
+router.post('/opening', aiAuth, aiLimiter, validateAiInput, routeToScript('opening'));
+router.post('/introduction', aiAuth, aiLimiter, validateAiInput, routeToScript('introduction'));
+router.post('/transition', aiAuth, aiLimiter, validateAiInput, routeToScript('transition'));
+router.post('/closing', aiAuth, aiLimiter, validateAiInput, routeToScript('closing'));
+router.post('/filler', aiAuth, aiLimiter, validateAiInput, routeToScript('filler'));
+router.post('/emergency', aiAuth, aiLimiter, validateAiInput, routeToScript('emergency'));
+router.post('/delay', aiAuth, aiLimiter, validateAiInput, routeToScript('delay'));
+router.post('/announcement', aiAuth, aiLimiter, validateAiInput, routeToScript('announcement'));
 
 export default router;
-

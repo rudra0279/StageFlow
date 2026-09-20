@@ -4,13 +4,28 @@ import { InviteCode } from '../models/InviteCode.js';
 import { ENV } from '../config/env.js';
 
 export const generateToken = (userId, role) => {
-  return jwt.sign({ id: userId, role }, ENV.JWT_SECRET, {
-    expiresIn: ENV.JWT_EXPIRES_IN
-  });
+  return jwt.sign(
+    {
+      id: String(userId),
+      role: (role || '').toUpperCase()
+    },
+    ENV.JWT_SECRET,
+    {
+      algorithm: 'HS256',
+      expiresIn: ENV.JWT_EXPIRES_IN
+    }
+  );
 };
 
 export const registerUser = async (userData) => {
-  const existingUser = await User.findOne({ email: userData.email });
+  const normalizedEmail = (userData.email || '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    const error = new Error('Email is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     const error = new Error('Email is already registered');
     error.statusCode = 400;
@@ -21,9 +36,12 @@ export const registerUser = async (userData) => {
   let finalRoleTitle = userData.roleTitle || (finalRole === 'anchor' ? 'Stage Anchor / MC' : 'Organizer');
   let finalResponsibility = userData.responsibility || (finalRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Event Operations & Coordination');
 
-  if (userData.inviteCode) {
-    const cleanCode = userData.inviteCode.trim().toUpperCase();
+  const rawInviteCode = userData.inviteCode || userData.code;
+
+  if (rawInviteCode) {
+    const cleanCode = String(rawInviteCode).trim().toUpperCase();
     let invite = await InviteCode.findOne({ code: cleanCode });
+
     if (!invite) {
       const DEFAULT_CODES = {
         'ORG123': { role: 'organizer', roleTitle: 'Event Lead', responsibility: 'Operations + Coordination' },
@@ -42,18 +60,50 @@ export const registerUser = async (userData) => {
         }
       }
     }
-    if (invite) {
-      finalRole = invite.role || finalRole;
-      finalRoleTitle = invite.roleTitle || finalRoleTitle;
-      finalResponsibility = invite.responsibility || finalResponsibility;
-      if (invite._id) {
-        await InviteCode.findByIdAndUpdate(invite._id, { $inc: { usageCount: 1 } });
-      }
+
+    if (!invite) {
+      const error = new Error('Invalid or expired invitation code.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check expiration
+    if (invite.status === 'EXPIRED' || (invite.expiresAt && new Date(invite.expiresAt) < new Date())) {
+      const error = new Error('Invalid or expired invitation code.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check disabled
+    if (invite.status === 'DISABLED' || invite.isActive === false) {
+      const error = new Error('This invitation code has been disabled.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check exhaustion
+    const count = invite.usageCount !== undefined ? invite.usageCount : (invite.currentUses || 0);
+    if (invite.status === 'EXHAUSTED' || (invite.maxUses && count >= invite.maxUses)) {
+      const error = new Error('This invitation code has exceeded its usage limit.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Authoritative role assignment strictly from validated invite
+    finalRole = invite.role || finalRole;
+    finalRoleTitle = invite.workRole || invite.roleTitle || finalRoleTitle;
+    finalResponsibility = invite.responsibility || finalResponsibility;
+
+    if (invite._id) {
+      await InviteCode.findByIdAndUpdate(invite._id, {
+        $inc: { usageCount: 1, currentUses: 1 }
+      });
     }
   }
 
   const user = await User.create({
     ...userData,
+    email: normalizedEmail,
     role: finalRole,
     roleTitle: finalRoleTitle,
     responsibility: finalResponsibility,
@@ -79,7 +129,8 @@ export const registerUser = async (userData) => {
 };
 
 export const loginUser = async (email, password) => {
-  const user = await User.findOne({ email }).select('+password');
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
   if (!user) {
     const error = new Error('Invalid email or password');
     error.statusCode = 401;

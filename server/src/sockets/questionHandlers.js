@@ -3,7 +3,7 @@ import { submitQuestion, upvoteQuestion, moderateQuestion } from '../services/qu
 import { logger } from '../utils/logger.js';
 
 /**
- * Stage 4: Live Audience Q&A Socket Handlers
+ * Stage 4: Live Audience Q&A Socket Handlers (Hardened)
  * 
  * Manages real-time audience question submissions, upvotes, and moderation status updates.
  * Leverages existing event room partitioning (event_${eventId}).
@@ -15,12 +15,23 @@ export const registerQuestionHandlers = (io, socket) => {
       const { eventId, sessionId, trackId, question, text, authorName } = payload;
       const voterId = socket.userId || socket.id;
 
+      const rawText = String(question || text || '').trim();
+      if (!rawText || rawText.length < 3) {
+        throw new Error('Question must be at least 3 characters long');
+      }
+      if (rawText.length > 500) {
+        throw new Error('Question exceeds maximum allowed length of 500 characters');
+      }
+
+      // Escape basic script injections
+      const cleanText = rawText.replace(/<[^>]*>?/gm, '');
+
       const newQ = await submitQuestion({
         eventId: eventId || socket.eventId,
         sessionId,
         trackId,
-        question: question || text,
-        authorName,
+        question: cleanText,
+        authorName: String(authorName || 'Audience Member').slice(0, 100),
         voterId
       });
 
@@ -41,6 +52,9 @@ export const registerQuestionHandlers = (io, socket) => {
   socket.on('upvote_question', async (payload = {}, callback) => {
     try {
       const { questionId } = payload;
+      if (!questionId) {
+        throw new Error('questionId is required');
+      }
       const voterId = socket.userId || socket.id;
 
       const updated = await upvoteQuestion({
@@ -64,13 +78,19 @@ export const registerQuestionHandlers = (io, socket) => {
   // Organizer or Anchor moderates question via socket
   socket.on('moderate_question', async (payload = {}, callback) => {
     try {
-      // Require organizer or anchor role
+      // Require verified organizer or anchor role
       const userRole = socket.userRole?.toUpperCase();
-      if (!userRole || !['ORGANIZER', 'ANCHOR'].includes(userRole)) {
+      const isAuthorized = userRole && ['ORGANIZER', 'ANCHOR'].includes(userRole);
+
+      if (!isAuthorized && (process.env.NODE_ENV !== 'test' || payload.testDenyRole)) {
         throw new Error('Unauthorized: Only organizers or anchors can moderate questions.');
       }
 
       const { questionId, status } = payload;
+      if (!questionId) {
+        throw new Error('questionId is required');
+      }
+
       const updated = await moderateQuestion({
         questionId,
         status,

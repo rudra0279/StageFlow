@@ -5,15 +5,18 @@ import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { EventProvider } from './context/EventContext';
 import { Navbar } from './components/layout/Navbar';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { EventsListPage } from './pages/organizer/EventsListPage';
 import { EventDashboard } from './pages/organizer/EventDashboard';
 import { LiveAnchorView } from './pages/anchor/LiveAnchorView';
-import { NotFoundPage } from './pages/NotFoundPage';
-
 import { AudienceQAView } from './pages/AudienceQAView';
+import { UnauthorizedPage } from './pages/UnauthorizedPage';
+import { ForbiddenPage } from './pages/ForbiddenPage';
+import { ServerErrorPage } from './pages/ServerErrorPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
   return (
@@ -26,24 +29,34 @@ export function App() {
                 <Navbar />
                 <main className="flex-1">
                   <Routes>
+                    {/* Public Presentation & Entry Routes */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
 
-                    {/* Audience Q&A Route */}
+                    {/* Audience Q&A Public Access Routes */}
                     <Route path="/qa" element={<AudienceQAView />} />
                     <Route path="/qa/:id" element={<AudienceQAView />} />
                     <Route path="/events/:id/qa" element={<AudienceQAView />} />
 
-                    {/* Organizer Routes */}
-                    <Route path="/organizer" element={<EventsListPage />} />
-                    <Route path="/organizer/events/:id" element={<EventDashboard />} />
+                    {/* Organizer Protected Routes */}
+                    <Route element={<ProtectedRoute allowedRoles={['ORGANIZER']} />}>
+                      <Route path="/organizer" element={<EventsListPage />} />
+                      <Route path="/organizer/events/:id" element={<EventDashboard />} />
+                    </Route>
 
-                    {/* Anchor Routes */}
-                    <Route path="/anchor" element={<LiveAnchorView />} />
-                    <Route path="/anchor/live/:id" element={<LiveAnchorView />} />
+                    {/* Anchor Protected Routes */}
+                    <Route element={<ProtectedRoute allowedRoles={['ANCHOR', 'ORGANIZER']} />}>
+                      <Route path="/anchor" element={<LiveAnchorView />} />
+                      <Route path="/anchor/live/:id" element={<LiveAnchorView />} />
+                    </Route>
 
-                    {/* Fallback */}
+                    {/* Dedicated Security and Error Pages */}
+                    <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                    <Route path="/forbidden" element={<ForbiddenPage />} />
+                    <Route path="/error" element={<ServerErrorPage />} />
+
+                    {/* Fallback Not Found */}
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </main>

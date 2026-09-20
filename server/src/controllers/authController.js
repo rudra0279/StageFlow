@@ -1,5 +1,6 @@
 import { registerUser, loginUser } from '../services/authService.js';
 import { InviteCode } from '../models/InviteCode.js';
+import { logAuditEvent, AUDIT_EVENT_TYPES } from '../utils/auditLogger.js';
 
 const DEFAULT_INVITE_CODES = [
   {
@@ -124,11 +125,12 @@ export const verifyInviteCode = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
     }
 
-    if (invite.status === 'DISABLED') {
+    if (invite.status === 'DISABLED' || invite.isActive === false) {
       return res.status(400).json({ success: false, message: 'This invitation code has been disabled.' });
     }
 
-    if (invite.status === 'EXHAUSTED' || (invite.maxUses && invite.usageCount >= invite.maxUses)) {
+    const count = invite.usageCount !== undefined ? invite.usageCount : (invite.currentUses || 0);
+    if (invite.status === 'EXHAUSTED' || (invite.maxUses && count >= invite.maxUses)) {
       return res.status(400).json({ success: false, message: 'This invitation code has exceeded its usage limit.' });
     }
 
@@ -140,7 +142,8 @@ export const verifyInviteCode = async (req, res, next) => {
         code: invite.code,
         registrationType: invite.registrationType || 'ORGANIZER',
         role: invite.role || 'organizer',
-        roleTitle: invite.roleTitle || 'Organizer',
+        workRole: invite.workRole || invite.roleTitle || 'Organizer',
+        roleTitle: invite.roleTitle || invite.workRole || 'Organizer',
         responsibility: invite.responsibility || 'Event Operations & Coordination',
       },
     });
@@ -152,12 +155,26 @@ export const verifyInviteCode = async (req, res, next) => {
 export const register = async (req, res, next) => {
   try {
     const result = await registerUser(req.body);
+    logAuditEvent({
+      eventType: AUDIT_EVENT_TYPES.AUTH_REGISTER_SUCCESS,
+      userId: result.user?.id,
+      userEmail: result.user?.email,
+      role: result.user?.role,
+      ip: req.ip
+    });
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: result
     });
   } catch (error) {
+    logAuditEvent({
+      eventType: AUDIT_EVENT_TYPES.AUTH_REGISTER_FAILURE,
+      userEmail: req.body?.email,
+      ip: req.ip,
+      success: false,
+      details: { error: error.message }
+    });
     next(error);
   }
 };
@@ -166,12 +183,26 @@ export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const result = await loginUser(email, password);
+    logAuditEvent({
+      eventType: AUDIT_EVENT_TYPES.AUTH_LOGIN_SUCCESS,
+      userId: result.user?.id,
+      userEmail: result.user?.email,
+      role: result.user?.role,
+      ip: req.ip
+    });
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: result
     });
   } catch (error) {
+    logAuditEvent({
+      eventType: AUDIT_EVENT_TYPES.AUTH_LOGIN_FAILURE,
+      userEmail: req.body?.email,
+      ip: req.ip,
+      success: false,
+      details: { error: error.message }
+    });
     next(error);
   }
 };

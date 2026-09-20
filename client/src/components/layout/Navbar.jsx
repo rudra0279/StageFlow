@@ -5,6 +5,7 @@ import { useSocket } from '../../hooks/useSocket';
 import { useTheme } from '../../context/ThemeContext';
 import { Radio, Sparkles, LogOut, Sun, Moon, LayoutDashboard, MonitorPlay, MessageSquare } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { SessionSecurityBadge } from '../common/SessionSecurityBadge';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -101,25 +102,7 @@ export const Navbar = () => {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              {/* Role badge */}
-              <Badge variant={user?.role?.toUpperCase() === 'ORGANIZER' ? 'cyan' : 'violet'} dot>
-                {user?.roleTitle || user?.role}
-              </Badge>
-
-              {/* User info */}
-              <div className="hidden md:block text-right">
-                <p className="text-xs font-semibold text-[var(--text-primary)]">{user?.name}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{user?.email}</p>
-              </div>
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                title="Sign out"
-                className="p-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-rose-400 hover:border-rose-500/30 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              <SessionSecurityBadge />
             </div>
           ) : (
             <div className="flex items-center gap-2">
