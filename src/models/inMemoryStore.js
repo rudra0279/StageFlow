@@ -8,6 +8,28 @@ function newObjectId() {
 
 const DEFAULT_INVITE_CODES = [
   {
+    _id: 'code-org-123',
+    code: 'ORG123',
+    registrationType: 'ORGANIZER',
+    role: 'organizer',
+    roleTitle: 'Event Lead',
+    responsibility: 'Operations + Coordination',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 1000,
+  },
+  {
+    _id: 'code-anc-123',
+    code: 'ANC123',
+    registrationType: 'ANCHOR',
+    role: 'anchor',
+    roleTitle: 'Stage Anchor / MC',
+    responsibility: 'Stage MC & Teleprompter Execution',
+    status: 'ACTIVE',
+    usageCount: 0,
+    maxUses: 1000,
+  },
+  {
     _id: 'code-org-7f29x',
     code: 'ORG-7F29X',
     registrationType: 'ORGANIZER',

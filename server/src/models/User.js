@@ -25,8 +25,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: Object.values(ROLES),
-      default: ROLES.ANCHOR
+      enum: ['ORGANIZER', 'ANCHOR', 'organizer', 'anchor', 'admin', 'attendee'],
+      default: 'ORGANIZER'
     },
     roleTitle: {
       type: String,

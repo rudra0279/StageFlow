@@ -5,7 +5,13 @@ export const registerSchema = Joi.object({
   name: Joi.string().trim().min(2).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  role: Joi.string().valid(...Object.values(ROLES)).default(ROLES.ANCHOR),
+  role: Joi.string().optional(),
+  roleTitle: Joi.string().allow('').optional(),
+  responsibility: Joi.string().allow('').optional(),
+  contactPhone: Joi.string().allow('').optional(),
+  phone: Joi.string().allow('').optional(),
+  inviteCode: Joi.string().allow('').optional(),
+  code: Joi.string().allow('').optional(),
   avatarUrl: Joi.string().uri().allow('').optional()
 });
 
