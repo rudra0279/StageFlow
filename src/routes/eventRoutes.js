@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 
 const speakerRoutes = require('./speakerRoutes');
 const agendaRoutes = require('./agendaRoutes');
@@ -28,5 +28,19 @@ router.route('/:id')
   .delete(authenticate, eventController.deleteEvent);
 
 router.get('/:id/live-state', eventController.getLiveState);
+
+// Run-of-Show PDF Exporter Data Endpoints (Stage 5)
+router.get(
+  '/:id/run-of-show',
+  authenticate,
+  requireRole('organizer', 'ORGANIZER', 'admin', 'ADMIN'),
+  eventController.getRunOfShow
+);
+router.get(
+  '/:id/export',
+  authenticate,
+  requireRole('organizer', 'ORGANIZER', 'admin', 'ADMIN'),
+  eventController.getRunOfShow
+);
 
 module.exports = router;

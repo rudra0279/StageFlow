@@ -1,6 +1,7 @@
 // src/controllers/eventController.js
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
-const { getEventState } = require('../services/sessionService');
+const { getEventState, getRunOfShowData } = require('../services/sessionService');
 const { logger } = require('../utils/logger');
 const socketEmitter = require('../socket/socketEmitter');
 
@@ -132,6 +133,59 @@ async function getLiveState(req, res, next) {
   }
 }
 
+async function getRunOfShow(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    // Validate ID format (400 Bad Request for invalid format)
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format',
+      });
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found',
+      });
+    }
+
+    // Authorization check: User must be event organizer or admin
+    if (event.organizerId && req.user) {
+      const eventOwnerId = (event.organizerId._id || event.organizerId).toString();
+      const requestUserId = (req.user._id || req.user.id).toString();
+      const userRole = (req.user.role || '').toLowerCase();
+      if (userRole !== 'admin' && eventOwnerId !== requestUserId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: You do not have permission to access this event run-of-show',
+        });
+      }
+    }
+
+    const runOfShow = await getRunOfShowData(id);
+    if (!runOfShow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found',
+      });
+    }
+
+    logger.event(`Run-of-Show exported for event: "${runOfShow.event.title}" (id: ${id})`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Run-of-show export retrieved successfully',
+      data: runOfShow,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createEvent,
   getEvents,
@@ -139,4 +193,5 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getLiveState,
+  getRunOfShow,
 };

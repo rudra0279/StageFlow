@@ -1,5 +1,6 @@
+import mongoose from 'mongoose';
 import { Event } from '../models/Event.js';
-import { getFullEventDetails, updateEventStatus } from '../services/eventService.js';
+import { getFullEventDetails, updateEventStatus, getRunOfShowData } from '../services/eventService.js';
 import { Announcement } from '../models/Announcement.js';
 import { socketService } from '../services/socketService.js';
 import { SOCKET_EVENTS } from '../constants/socketEvents.js';
@@ -119,6 +120,55 @@ export const deleteEvent = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Event deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRunOfShow = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format'
+      });
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    if (event.organizerId && req.user) {
+      const eventOwnerId = (event.organizerId._id || event.organizerId).toString();
+      const requestUserId = (req.user._id || req.user.id).toString();
+      const userRole = (req.user.role || '').toLowerCase();
+      if (userRole !== 'admin' && eventOwnerId !== requestUserId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: You do not have permission to access this event run-of-show'
+        });
+      }
+    }
+
+    const runOfShow = await getRunOfShowData(id);
+    if (!runOfShow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Run-of-show export retrieved successfully',
+      data: runOfShow
     });
   } catch (error) {
     next(error);

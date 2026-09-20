@@ -291,6 +291,176 @@ async function delaySession(eventId, agendaId, delayMinutes) {
   };
 }
 
+/**
+ * Generate normalized Run-of-Show export data for an event.
+ * Reuses the authoritative delay engine and multi-track separation state.
+ * Sanitizes speaker data to omit private/sensitive fields.
+ *
+ * @param {string} eventId
+ * @returns {Promise<Object|null>} Normalized run-of-show data or null if event not found
+ */
+async function getRunOfShowData(eventId) {
+  const event = await Event.findById(eventId).populate('organizerId', 'name email');
+  if (!event) return null;
+
+  // Retrieve all sessions for this event, sorted by orderIndex and startTime
+  const rawSessions = await Agenda.find({ eventId })
+    .populate('speakerId')
+    .sort({ orderIndex: 1, startTime: 1 });
+
+  // Multi-track discovery & deterministic ordering
+  const trackSet = new Set();
+  for (const session of rawSessions) {
+    const tName = session.track || session.trackId || (session.room && session.room !== 'Main Stage' ? session.room : 'Track A');
+    trackSet.add(tName);
+  }
+  const trackNames = Array.from(trackSet).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  // Normalize sessions
+  const normalizedSessions = rawSessions.map((session, idx) => {
+    const tName = session.track || session.trackId || (session.room && session.room !== 'Main Stage' ? session.room : 'Track A');
+    const delayOffset = session.delayMinutes || session.delayOffsetMinutes || 0;
+
+    // Authoritative delay calculation: derive original scheduled times if not stored directly
+    let scheduledStart = null;
+    let scheduledEnd = null;
+    const adjustedStart = session.startTime ? new Date(session.startTime).toISOString() : null;
+    const adjustedEnd = session.endTime ? new Date(session.endTime).toISOString() : null;
+
+    if (session.scheduledStartTime) {
+      scheduledStart = new Date(session.scheduledStartTime).toISOString();
+      scheduledEnd = session.scheduledEndTime
+        ? new Date(session.scheduledEndTime).toISOString()
+        : (session.durationMinutes && scheduledStart ? new Date(new Date(scheduledStart).getTime() + session.durationMinutes * 60000).toISOString() : adjustedEnd);
+    } else if (delayOffset > 0 && adjustedStart && adjustedEnd) {
+      if (session.status === 'LIVE') {
+        scheduledStart = adjustedStart;
+        scheduledEnd = new Date(new Date(adjustedEnd).getTime() - delayOffset * 60000).toISOString();
+      } else {
+        scheduledStart = new Date(new Date(adjustedStart).getTime() - delayOffset * 60000).toISOString();
+        scheduledEnd = new Date(new Date(adjustedEnd).getTime() - delayOffset * 60000).toISOString();
+      }
+    } else {
+      scheduledStart = adjustedStart;
+      scheduledEnd = adjustedEnd;
+    }
+
+    // Sanitize speaker (no passwords, tokens, or private credentials)
+    let speakerData = null;
+    if (session.speakerId && typeof session.speakerId === 'object') {
+      const sp = session.speakerId;
+      speakerData = {
+        id: sp._id ? sp._id.toString() : (sp.id ? sp.id.toString() : null),
+        name: sp.name || '',
+        title: sp.designation || sp.title || '',
+        company: sp.organization || sp.company || '',
+        organization: sp.organization || sp.company || '',
+        pronunciationGuide: sp.pronunciationGuide || '',
+        pronunciation: sp.pronunciationGuide || '',
+        topic: sp.topic || '',
+        bio: sp.bio || '',
+      };
+    }
+
+    const duration = session.durationMinutes || (
+      adjustedStart && adjustedEnd
+        ? Math.round((new Date(adjustedEnd).getTime() - new Date(adjustedStart).getTime()) / 60000)
+        : 0
+    );
+
+    const sessionOrder = typeof session.orderIndex === 'number' ? session.orderIndex : idx;
+
+    return {
+      sessionId: session._id.toString(),
+      id: session._id.toString(),
+      title: session.title || '',
+      description: session.description || '',
+      speaker: speakerData,
+      speakerInfo: speakerData,
+      scheduledStart,
+      scheduledEnd,
+      adjustedStart,
+      adjustedEnd,
+      currentStart: adjustedStart,
+      currentEnd: adjustedEnd,
+      duration,
+      durationMinutes: duration,
+      delayOffset,
+      delayMinutes: delayOffset,
+      status: session.status || 'UPCOMING',
+      orderIndex: sessionOrder,
+      index: sessionOrder,
+      track: tName,
+      trackId: tName,
+      type: session.type || 'KEYNOTE',
+      room: session.room || 'Main Stage',
+    };
+  });
+
+  // Partition sessions into tracks with strict multi-track isolation
+  const tracks = trackNames.map((tName, tIdx) => {
+    const trackSessions = normalizedSessions.filter(s => s.track === tName);
+    trackSessions.sort((a, b) => {
+      if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex;
+      if (a.scheduledStart && b.scheduledStart) {
+        return new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime();
+      }
+      return 0;
+    });
+
+    const trackDelayMinutes = trackSessions.reduce((max, s) => Math.max(max, s.delayOffset || 0), 0);
+
+    return {
+      trackIdentifier: tName,
+      trackId: tName,
+      trackName: tName,
+      trackOrdering: tIdx + 1,
+      sessionCount: trackSessions.length,
+      trackDelayMinutes,
+      sessions: trackSessions,
+    };
+  });
+
+  const totalDelay = typeof event.delayTotalMinutes === 'number'
+    ? event.delayTotalMinutes
+    : (event.totalDelayMinutes || 0);
+
+  const eventData = {
+    id: event._id.toString(),
+    eventId: event._id.toString(),
+    title: event.name || event.title || 'Untitled Event',
+    name: event.name || event.title || 'Untitled Event',
+    description: event.description || '',
+    date: event.date ? new Date(event.date).toISOString() : null,
+    venue: event.venue || 'Main Venue',
+    status: event.status || 'UPCOMING',
+    healthStatus: event.eventHealth || event.healthStatus || calculateHealth(totalDelay),
+    eventHealth: event.eventHealth || event.healthStatus || calculateHealth(totalDelay),
+    currentTotalDelay: totalDelay,
+    delayTotalMinutes: totalDelay,
+    startTime: event.startTime ? new Date(event.startTime).toISOString() : null,
+    endTime: event.endTime ? new Date(event.endTime).toISOString() : null,
+    exportTimestamp: new Date().toISOString(),
+    totalTracks: tracks.length,
+    totalSessions: normalizedSessions.length,
+  };
+
+  return {
+    event: eventData,
+    tracks,
+    sessions: normalizedSessions,
+    summary: {
+      totalTracks: tracks.length,
+      totalSessions: normalizedSessions.length,
+      totalDelayMinutes: totalDelay,
+      eventHealth: eventData.eventHealth,
+      exportTimestamp: eventData.exportTimestamp,
+    },
+  };
+}
+
 module.exports = {
   getEventState,
   startSession,
@@ -298,4 +468,5 @@ module.exports = {
   skipSession,
   delaySession,
   calculateHealth,
+  getRunOfShowData,
 };

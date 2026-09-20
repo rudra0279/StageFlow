@@ -6,7 +6,8 @@ import {
   updateEvent,
   deleteEvent,
   setStatus,
-  broadcastAnnouncement
+  broadcastAnnouncement,
+  getRunOfShow
 } from '../controllers/eventController.js';
 import sessionRoutes from './sessionRoutes.js';
 import questionRoutes from './questionRoutes.js';
@@ -47,6 +48,21 @@ router.post(
   authorize(ROLES.ORGANIZER),
   validate(broadcastAlertSchema),
   broadcastAnnouncement
+);
+
+// Run-of-Show PDF Exporter Data Endpoints (Stage 5)
+router.get(
+  '/:id/run-of-show',
+  protect,
+  authorize(ROLES.ORGANIZER),
+  getRunOfShow
+);
+
+router.get(
+  '/:id/export',
+  protect,
+  authorize(ROLES.ORGANIZER),
+  getRunOfShow
 );
 
 export default router;
