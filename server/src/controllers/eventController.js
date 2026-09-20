@@ -145,32 +145,71 @@ export const getRunOfShow = async (req, res, next) => {
       });
     }
 
-    if (event.organizerId && req.user) {
-      const eventOwnerId = (event.organizerId._id || event.organizerId).toString();
-      const requestUserId = (req.user._id || req.user.id).toString();
-      const userRole = (req.user.role || '').toLowerCase();
-      if (userRole !== 'admin' && eventOwnerId !== requestUserId) {
-        return res.status(403).json({
+    const isJson = req.query.format === 'json' || (req.headers.accept && req.headers.accept.includes('application/json') && !req.headers.accept.includes('application/pdf'));
+
+    if (isJson) {
+      const runOfShow = await getRunOfShowData(id);
+      if (!runOfShow) {
+        return res.status(404).json({
           success: false,
-          message: 'Forbidden: You do not have permission to access this event run-of-show'
+          message: 'Event not found'
         });
       }
-    }
 
-    const runOfShow = await getRunOfShowData(id);
-    if (!runOfShow) {
-      return res.status(404).json({
-        success: false,
-        message: 'Event not found'
+      return res.status(200).json({
+        success: true,
+        message: 'Run-of-show export retrieved successfully',
+        data: runOfShow
       });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Run-of-show export retrieved successfully',
-      data: runOfShow
+    const { sessions } = await getFullEventDetails(id);
+    const { generatePdfBuffer } = await import('../utils/pdfGenerator.js');
+
+    const tracksMap = {};
+    (sessions || []).forEach((session) => {
+      const trackName = session.track || 'Track A';
+      if (!tracksMap[trackName]) {
+        tracksMap[trackName] = {
+          name: trackName,
+          delay: session.trackDelayMinutes || 0,
+          sessions: []
+        };
+      }
+      tracksMap[trackName].sessions.push({
+        title: session.title,
+        speaker: session.speakerName || (session.speakerId && session.speakerId.name) || 'TBA',
+        time: session.startTime,
+        duration: session.durationMinutes || session.duration,
+        status: session.status,
+        delayMinutes: session.delayMinutes
+      });
     });
+
+    ['Track A', 'Track B', 'Track C'].forEach((tName) => {
+      if (!tracksMap[tName]) {
+        tracksMap[tName] = { name: tName, delay: 0, sessions: [] };
+      }
+    });
+
+    const pdfBuffer = generatePdfBuffer({
+      title: event.title || event.name || 'StagePilot Event',
+      date: event.date,
+      venue: event.venue || 'Main Stage',
+      theme: event.theme || 'Tech',
+      totalDelayMinutes: event.totalDelayMinutes || event.delayTotalMinutes || 0,
+      tracks: Object.values(tracksMap)
+    });
+
+    const filename = `Run-Of-Show-${(event.title || event.name || 'Event').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.send(pdfBuffer);
   } catch (error) {
     next(error);
   }
 };
+
+export const getRunOfShowPdf = getRunOfShow;

@@ -7,7 +7,8 @@ import {
   deleteEvent,
   setStatus,
   broadcastAnnouncement,
-  getRunOfShow
+  getRunOfShow,
+  getRunOfShowPdf
 } from '../controllers/eventController.js';
 import sessionRoutes from './sessionRoutes.js';
 import questionRoutes from './questionRoutes.js';
@@ -23,6 +24,8 @@ const router = express.Router();
 // Forward nested routes: /api/events/:eventId/sessions and /api/events/:eventId/questions
 router.use('/:eventId/sessions', sessionRoutes);
 router.use('/:eventId/questions', questionRoutes);
+
+router.get('/:id/run-of-show', protect, getRunOfShowPdf);
 
 router.route('/')
   .get(protect, getEvents)

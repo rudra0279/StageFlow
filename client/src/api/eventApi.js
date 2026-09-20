@@ -24,5 +24,12 @@ export const eventApi = {
   broadcastAlert: async (id, alertData) => {
     const res = await axiosClient.post(`/events/${id}/broadcast`, alertData);
     return res.data;
+  },
+
+  exportRunOfShowPdf: async (id) => {
+    const res = await axiosClient.get(`/events/${id}/run-of-show`, {
+      responseType: 'blob'
+    });
+    return res;
   }
 };

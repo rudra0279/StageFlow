@@ -37,6 +37,7 @@ router.route('/:id')
   .delete(authenticate, eventController.deleteEvent);
 
 router.get('/:id/live-state', eventController.getLiveState);
+router.get('/:id/run-of-show', eventController.getRunOfShow);
 
 // Event Work Types configuration
 router.get('/:id/work-types', eventController.getEventWorkTypes);
