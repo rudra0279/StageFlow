@@ -67,8 +67,8 @@ export const Navbar = () => {
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
               {/* Role badge */}
-              <Badge variant={user?.role === 'ORGANIZER' ? 'cyan' : 'violet'} dot>
-                {user?.role}
+              <Badge variant={user?.role?.toUpperCase() === 'ORGANIZER' ? 'cyan' : 'violet'} dot>
+                {user?.roleTitle || user?.role}
               </Badge>
 
               {/* User info */}
