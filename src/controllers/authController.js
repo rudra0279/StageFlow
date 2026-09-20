@@ -1,17 +1,18 @@
 // src/controllers/authController.js
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 const env = require('../config/env');
+const User = require('../models/User');
+const InviteCode = require('../models/InviteCode');
+const { validateInviteCode, consumeInviteCode, createInviteCode } = require('../services/inviteService');
 const { logger } = require('../utils/logger');
-const {
-  validateInviteCode,
-  consumeInviteCode,
-  createInviteCode,
-} = require('../services/inviteService');
 
 function generateToken(user) {
   return jwt.sign(
-    { id: user._id, email: user.email, role: user.role, name: user.name },
+    {
+      id: user._id,
+      role: user.role,
+      workRole: user.workRole || 'OPERATIONS',
+    },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN }
   );
@@ -20,33 +21,18 @@ function generateToken(user) {
 async function verifyInviteCode(req, res, next) {
   try {
     const { code } = req.body;
-    if (!code || typeof code !== 'string') {
-      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Invite code is required' });
     }
 
-    const cleanCode = code.trim().toUpperCase();
-    const InviteCode = require('../models/InviteCode');
-    const invite = await InviteCode.findOne({ code: cleanCode });
-
+    const invite = await InviteCode.findOne({ code, isUsed: false });
     if (!invite) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
-    }
-
-    if (invite.status === 'EXPIRED' || (invite.expiresAt && new Date(invite.expiresAt) < new Date())) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired invitation code.' });
-    }
-
-    if (invite.status === 'DISABLED') {
-      return res.status(400).json({ success: false, message: 'This invitation code has been disabled.' });
-    }
-
-    if (invite.status === 'EXHAUSTED' || (invite.maxUses && invite.usageCount >= invite.maxUses)) {
-      return res.status(400).json({ success: false, message: 'This invitation code has exceeded its usage limit.' });
+      return res.status(404).json({ success: false, message: 'Invalid or expired invite code' });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Invitation code verified successfully',
+      message: 'Invite code verified successfully',
       data: {
         valid: true,
         code: invite.code,
@@ -63,18 +49,16 @@ async function verifyInviteCode(req, res, next) {
 
 async function register(req, res, next) {
   try {
-<<<<<<< Updated upstream
-    const { name, email, password, inviteCode, code, phone, avatar } = req.body;
-=======
-    const { name, email, password, role, roleTitle, responsibility, contactPhone, inviteCode } = req.body;
->>>>>>> Stashed changes
+    const { name, email, password, role, roleTitle, responsibility, contactPhone, phone, avatar, inviteCode, code } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
 
     const effectiveCode = inviteCode || code;
-    let assignedRole = 'organizer';
+    let assignedRole = role || 'organizer';
     let assignedWorkRole = 'OPERATIONS';
+    let finalRoleTitle = roleTitle || (assignedRole === 'anchor' ? 'Stage Anchor / MC' : 'Event Lead');
+    let finalResponsibility = responsibility || (assignedRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Operations + Coordination');
     let eventIdToJoin = null;
 
     if (effectiveCode) {
@@ -85,15 +69,15 @@ async function register(req, res, next) {
           message: validation.message || 'Invalid invite code',
         });
       }
-      // Authoritative role assignment derived strictly from invite code
-      assignedRole = validation.invite.role;
+      assignedRole = validation.invite.role || assignedRole;
       assignedWorkRole = validation.invite.workRole || 'OPERATIONS';
+      finalRoleTitle = validation.invite.roleTitle || finalRoleTitle;
+      finalResponsibility = validation.invite.responsibility || finalResponsibility;
       eventIdToJoin = validation.invite.eventId || null;
       await consumeInviteCode(effectiveCode);
     } else {
-      // In test mode or when open registration is allowed, allow fallback for existing tests
       if (process.env.NODE_ENV === 'test' || process.env.ALLOW_OPEN_REGISTRATION === 'true') {
-        assignedRole = req.body.role || 'organizer';
+        assignedRole = role || 'organizer';
       } else {
         return res.status(400).json({
           success: false,
@@ -102,46 +86,20 @@ async function register(req, res, next) {
       }
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists with this email' });
-    }
-
-    let finalRole = role || 'organizer';
-    let finalRoleTitle = roleTitle || (finalRole === 'anchor' ? 'Stage Anchor / MC' : 'Organizer');
-    let finalResponsibility = responsibility || (finalRole === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Event Operations & Coordination');
-
-    if (inviteCode) {
-      const InviteCode = require('../models/InviteCode');
-      const cleanCode = inviteCode.trim().toUpperCase();
-      const invite = await InviteCode.findOne({ code: cleanCode });
-      if (invite) {
-        finalRole = invite.role || finalRole;
-        finalRoleTitle = invite.roleTitle || finalRoleTitle;
-        finalResponsibility = invite.responsibility || finalResponsibility;
-        await InviteCode.findByIdAndUpdate(invite._id, { $inc: { usageCount: 1 } });
-      }
-    }
-
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password,
-<<<<<<< Updated upstream
       role: assignedRole,
       workRole: assignedWorkRole,
-      phone: phone || '',
-      avatar: avatar || '',
-=======
-      role: finalRole,
       roleTitle: finalRoleTitle,
       responsibility: finalResponsibility,
-      contactPhone: contactPhone || '',
+      contactPhone: contactPhone || phone || '',
+      phone: phone || contactPhone || '',
+      avatar: avatar || '',
       status: 'ACTIVE',
->>>>>>> Stashed changes
     });
 
-    // Auto-join event committee if invite was event-specific
     if (eventIdToJoin) {
       try {
         const Event = require('../models/Event');
@@ -181,13 +139,10 @@ async function register(req, res, next) {
           name: user.name,
           email: user.email,
           role: user.role,
-<<<<<<< Updated upstream
           workRole: user.workRole || assignedWorkRole,
-=======
           roleTitle: user.roleTitle,
           responsibility: user.responsibility,
           contactPhone: user.contactPhone,
->>>>>>> Stashed changes
         },
         token,
       },
@@ -225,13 +180,10 @@ async function login(req, res, next) {
           name: user.name,
           email: user.email,
           role: user.role,
-<<<<<<< Updated upstream
           workRole: user.workRole || 'OPERATIONS',
-=======
           roleTitle: user.roleTitle || (user.role === 'anchor' ? 'Stage Anchor / MC' : 'Event Lead'),
           responsibility: user.responsibility || (user.role === 'anchor' ? 'Stage MC & Teleprompter Execution' : 'Operations + Coordination'),
           contactPhone: user.contactPhone || '+1 (555) 234-5678',
->>>>>>> Stashed changes
         },
         token,
       },
@@ -250,7 +202,6 @@ async function getMe(req, res) {
   });
 }
 
-<<<<<<< Updated upstream
 async function validateInvite(req, res, next) {
   try {
     const code = req.body.inviteCode || req.body.code || req.query.code;
@@ -286,7 +237,6 @@ async function createInvite(req, res, next) {
 
 async function getInvites(req, res, next) {
   try {
-    const InviteCode = require('../models/InviteCode');
     const filter = {};
     if (req.query.eventId) filter.eventId = req.query.eventId;
     if (req.query.role) filter.role = req.query.role;
@@ -302,6 +252,7 @@ async function getInvites(req, res, next) {
 }
 
 module.exports = {
+  verifyInviteCode,
   register,
   login,
   getMe,
@@ -309,6 +260,3 @@ module.exports = {
   createInvite,
   getInvites,
 };
-=======
-module.exports = { verifyInviteCode, register, login, getMe };
->>>>>>> Stashed changes

@@ -104,11 +104,7 @@ const collections = {
   Agenda: [],
   Announcement: [],
   Question: [],
-<<<<<<< Updated upstream
-  InviteCode: [],
-=======
-  InviteCode: DEFAULT_INVITE_CODES.map(c => ({ ...c })),
->>>>>>> Stashed changes
+  InviteCode: (typeof DEFAULT_INVITE_CODES !== 'undefined' && Array.isArray(DEFAULT_INVITE_CODES)) ? DEFAULT_INVITE_CODES.map(c => ({ ...c })) : [],
   Task: [],
   ChatMessage: [],
 };
@@ -451,10 +447,7 @@ module.exports = {
   MemoryInviteCode,
   MemoryTask,
   MemoryChatMessage,
-<<<<<<< Updated upstream
-=======
   DEFAULT_INVITE_CODES,
->>>>>>> Stashed changes
   clearAllMemoryCollections,
   collections,
 };
