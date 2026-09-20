@@ -78,22 +78,25 @@ export const AnchorCopilotDrawer = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-stage-950 border-l border-stage-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 glass-panel border-l border-cyan-500/30 shadow-2xl flex flex-col animate-fade-in">
       {/* Header */}
-      <div className="p-4 bg-stage-900 border-b border-stage-800 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-md">
-            <Bot className="w-4 h-4 text-white" />
+      <div className="p-4 bg-stage-900/90 border-b border-stage-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <Bot className="w-5 h-5 text-white animate-pulse" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">Stage AI Co-Pilot</h4>
-            <p className="text-[10px] text-slate-400">Contextual stage assistant</p>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-black text-white tracking-tight">AI Stage Co-Pilot</h4>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-live-dot" />
+            </div>
+            <p className="text-[10px] font-mono text-cyan-300">INTELLIGENT BACKSTAGE ASSISTANT</p>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-stage-800"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-stage-800 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -107,39 +110,39 @@ export const AnchorCopilotDrawer = ({
             className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div
-              className={`max-w-[85%] rounded-xl p-3 text-xs leading-relaxed ${
+              className={`max-w-[88%] rounded-2xl p-3.5 text-xs leading-relaxed shadow-md ${
                 m.sender === 'user'
-                  ? 'bg-cyan-600 text-white rounded-br-none'
-                  : 'bg-stage-900 border border-stage-800 text-slate-200 rounded-bl-none'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-br-none font-medium'
+                  : 'bg-stage-900/90 border border-stage-800 text-slate-200 rounded-bl-none'
               }`}
             >
               {m.text}
             </div>
             {m.provider && (
-              <span className="text-[9px] text-slate-500 mt-1 font-mono">
-                {m.provider}
+              <span className="text-[9px] text-cyan-400 mt-1 font-mono font-semibold px-1">
+                ⚡ {m.provider}
               </span>
             )}
           </div>
         ))}
         {loading && (
-          <div className="flex items-center gap-2 text-xs text-slate-500 italic p-2">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-            Co-Pilot thinking...
+          <div className="flex items-center gap-2 text-xs text-cyan-300 font-mono italic p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/20 animate-pulse">
+            <Sparkles className="w-4 h-4 text-cyan-400 animate-spin" />
+            Stage AI Co-Pilot analyzing live telemetry...
           </div>
         )}
       </div>
 
       {/* Quick query pills */}
-      <div className="px-3 py-2 bg-stage-900/60 border-t border-stage-850 flex flex-wrap gap-1.5">
+      <div className="p-3 bg-stage-950/80 border-t border-stage-850 flex flex-wrap gap-1.5">
         {quickPills.map((pill) => (
           <button
             key={pill}
             type="button"
             onClick={() => handleSend(pill)}
-            className="text-[11px] bg-stage-850 hover:bg-stage-800 text-slate-300 px-2 py-1 rounded border border-stage-800 transition-colors"
+            className="text-[10px] font-semibold bg-stage-900 hover:bg-cyan-500/20 hover:text-cyan-300 text-slate-300 px-2.5 py-1 rounded-lg border border-stage-800 hover:border-cyan-500/30 transition-all text-left"
           >
-            {pill}
+            ⚡ {pill}
           </button>
         ))}
       </div>
@@ -151,8 +154,8 @@ export const AnchorCopilotDrawer = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Ask quick question..."
-          className="flex-1 bg-stage-950 border border-stage-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+          placeholder="Ask AI stage assistant..."
+          className="flex-1 bg-stage-950 border border-stage-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
         />
         <Button
           variant="primary"
@@ -160,6 +163,7 @@ export const AnchorCopilotDrawer = ({
           onClick={() => handleSend()}
           disabled={loading || !query.trim()}
           icon={Send}
+          className="shadow-md shadow-cyan-500/20"
         />
       </div>
     </div>

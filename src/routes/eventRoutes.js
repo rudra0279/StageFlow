@@ -28,6 +28,7 @@ router.route('/:id')
   .delete(authenticate, eventController.deleteEvent);
 
 router.get('/:id/live-state', eventController.getLiveState);
+router.get('/:id/run-of-show', eventController.getRunOfShow);
 
 // Run-of-Show PDF Exporter Data Endpoints (Stage 5)
 router.get(

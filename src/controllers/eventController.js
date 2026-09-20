@@ -137,7 +137,6 @@ async function getRunOfShow(req, res, next) {
   try {
     const { id } = req.params;
 
-    // Validate ID format (400 Bad Request for invalid format)
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -153,34 +152,72 @@ async function getRunOfShow(req, res, next) {
       });
     }
 
-    // Authorization check: User must be event organizer or admin
-    if (event.organizerId && req.user) {
-      const eventOwnerId = (event.organizerId._id || event.organizerId).toString();
-      const requestUserId = (req.user._id || req.user.id).toString();
-      const userRole = (req.user.role || '').toLowerCase();
-      if (userRole !== 'admin' && eventOwnerId !== requestUserId) {
-        return res.status(403).json({
+    // Check if client explicitly requests JSON output format
+    const isJson = req.query.format === 'json' || (req.headers.accept && req.headers.accept.includes('application/json') && !req.headers.accept.includes('application/pdf'));
+
+    if (isJson) {
+      const runOfShow = await getRunOfShowData(id);
+      if (!runOfShow) {
+        return res.status(404).json({
           success: false,
-          message: 'Forbidden: You do not have permission to access this event run-of-show',
+          message: 'Event not found',
         });
       }
-    }
 
-    const runOfShow = await getRunOfShowData(id);
-    if (!runOfShow) {
-      return res.status(404).json({
-        success: false,
-        message: 'Event not found',
+      logger.event(`Run-of-Show JSON exported for event: "${runOfShow.event.title}" (id: ${id})`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Run-of-show export retrieved successfully',
+        data: runOfShow,
       });
     }
 
-    logger.event(`Run-of-Show exported for event: "${runOfShow.event.title}" (id: ${id})`);
+    // PDF Export Generation
+    const { generatePdfBuffer } = require('../utils/pdfGenerator');
+    const state = await getEventState(id);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Run-of-show export retrieved successfully',
-      data: runOfShow,
+    const tracksMap = {};
+    (state.agendaList || []).forEach((session) => {
+      const trackName = session.track || 'Track A';
+      if (!tracksMap[trackName]) {
+        tracksMap[trackName] = {
+          name: trackName,
+          delay: session.trackDelayMinutes || 0,
+          sessions: []
+        };
+      }
+      tracksMap[trackName].sessions.push({
+        title: session.title,
+        speaker: session.speakerName || (session.speakerId && session.speakerId.name) || 'TBA',
+        time: session.startTime,
+        duration: session.durationMinutes,
+        status: session.status,
+        delayMinutes: session.delayMinutes
+      });
     });
+
+    ['Track A', 'Track B', 'Track C'].forEach((tName) => {
+      if (!tracksMap[tName]) {
+        tracksMap[tName] = { name: tName, delay: 0, sessions: [] };
+      }
+    });
+
+    const pdfBuffer = generatePdfBuffer({
+      title: event.name || event.title || 'StagePilot Event',
+      date: event.date,
+      venue: event.venue,
+      theme: event.theme,
+      totalDelayMinutes: event.delayTotalMinutes || 0,
+      tracks: Object.values(tracksMap)
+    });
+
+    const filename = `Run-Of-Show-${(event.name || event.title || 'Event').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.send(pdfBuffer);
   } catch (error) {
     next(error);
   }
